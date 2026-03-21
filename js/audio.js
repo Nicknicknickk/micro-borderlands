@@ -65,6 +65,38 @@ function createAudio(filename) {
 function crossfadeTo(filename, onComplete) {
   if (fadeInterval) clearInterval(fadeInterval);
 
+  // ── Kill ALL existing audio before starting new ──
+  if (currentAudio) {
+    try { currentAudio.pause(); currentAudio.src = ''; } catch(e) {}
+    currentAudio = null;
+  }
+  if (nextAudio) {
+    try { nextAudio.pause(); nextAudio.src = ''; } catch(e) {}
+    nextAudio = null;
+  }
+
+  const incoming = createAudio(filename);
+  incoming.volume = 0;
+  incoming.play().catch(() => {});
+
+  const fadeSteps = 40;
+  const fadeMs    = 2000 / fadeSteps;
+  let   step      = 0;
+
+  fadeInterval = setInterval(() => {
+    step++;
+    incoming.volume = Math.min(musicVolume, musicVolume * (step / fadeSteps));
+    if (step >= fadeSteps) {
+      clearInterval(fadeInterval);
+      fadeInterval = null;
+      currentAudio = incoming;
+      if (onComplete) onComplete();
+    }
+  }, fadeMs);
+
+  currentAudio = incoming;
+}
+
   const incoming = createAudio(filename);
   incoming.volume = 0;
   incoming.play().catch(() => {});
