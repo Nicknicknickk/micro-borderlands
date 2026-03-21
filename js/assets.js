@@ -141,3 +141,15 @@ function drawPixelSprite(context, name, x, y, s) {
 
   context.restore();
 }
+// ── New Enemy Sprites ──────────────────────
+const skagImg        = new Image();
+const bullymongImg   = new Image();
+const stalkerImg     = new Image();
+const surveyorImg    = new Image();
+const badasspsychoImg = new Image();
+
+skagImg.src         = 'sprites/skag.png';
+bullymongImg.src    = 'sprites/bullymong.png';
+stalkerImg.src      = 'sprites/stalker.png';
+surveyorImg.src     = 'sprites/surveyor.png';
+badasspsychoImg.src = 'sprites/badass_psycho.png';

@@ -1,263 +1,204 @@
 /* ==========================================
-   ENEMIES.JS — New Enemy Types v1.0
-   Skag, Bullymong, Stalker, Surveyor,
-   Badass Psycho
+   ENEMIES.JS — New Enemy Types v2.0
+   Now with AI generated sprites!
    ========================================== */
 
-// ── Draw new enemy sprites ─────────────────
-function drawNewEnemy(ctx, e) {
-  ctx.save();
-  ctx.translate(e.x, e.y);
+const NEW_ENEMY_TYPES = ['skag','bullymong','stalker','surveyor','badass_psycho'];
 
-  switch(e.type) {
-
-    // ── SKAG ────────────────────────────────
-    case 'skag': {
-      const t = Date.now() / 100;
-      // Body
-      ctx.fillStyle = e.pC || '#8b6914';
-      ctx.beginPath(); ctx.ellipse(0, 0, e.w/2, e.h/2.5, 0, 0, Math.PI*2); ctx.fill();
-      // Head
-      ctx.fillStyle = '#a07820';
-      ctx.beginPath(); ctx.ellipse(e.w/3, -e.h/6, e.w/3, e.h/3, 0.3, 0, Math.PI*2); ctx.fill();
-      // Jaw (opens when charging)
-      const jawOpen = e.charging ? 0.4 : 0.1;
-      ctx.fillStyle = '#cc2200';
-      ctx.beginPath(); ctx.ellipse(e.w/2.2, e.h/8, e.w/4, e.h/6*jawOpen*3, 0.3, 0, Math.PI*2); ctx.fill();
-      // Eyes
-      ctx.fillStyle = '#ff4400';
-      ctx.beginPath(); ctx.arc(e.w/3.5, -e.h/4, 4, 0, Math.PI*2); ctx.fill();
-      // Legs
-      ctx.strokeStyle = '#8b6914'; ctx.lineWidth = 4;
-      const legCycle = Math.sin(t) * 8;
-      [-e.w/3, -e.w/6, e.w/6, e.w/3].forEach((lx, i) => {
-        ctx.beginPath(); ctx.moveTo(lx, e.h/4);
-        ctx.lineTo(lx + (i%2===0?-3:3), e.h/2 + (i%2===0?legCycle:-legCycle)); ctx.stroke();
-      });
-      break;
-    }
-
-    // ── BULLYMONG ───────────────────────────
-    case 'bullymong': {
-      // Big furry body
-      ctx.fillStyle = e.pC || '#5c3d1e';
-      ctx.beginPath(); ctx.arc(0, 0, e.w/2, 0, Math.PI*2); ctx.fill();
-      // Fur texture
-      ctx.fillStyle = '#7a5230';
-      for(let f=0; f<8; f++) {
-        const fa = (Math.PI*2/8)*f;
-        ctx.beginPath(); ctx.arc(Math.cos(fa)*e.w/2.5, Math.sin(fa)*e.w/2.5, 6, 0, Math.PI*2); ctx.fill();
-      }
-      // Face
-      ctx.fillStyle = '#ffe0bd';
-      ctx.beginPath(); ctx.arc(e.w/6, -e.h/6, e.w/3.5, 0, Math.PI*2); ctx.fill();
-      // Eyes - angry
-      ctx.fillStyle = '#ff0000';
-      ctx.beginPath(); ctx.arc(e.w/8, -e.h/5, 5, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(e.w/4, -e.h/5, 5, 0, Math.PI*2); ctx.fill();
-      // Arms up
-      ctx.strokeStyle = '#5c3d1e'; ctx.lineWidth = 8;
-      ctx.beginPath(); ctx.moveTo(-e.w/2, 0); ctx.lineTo(-e.w/1.2, -e.h/3); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(e.w/2, 0); ctx.lineTo(e.w/1.2, -e.h/3); ctx.stroke();
-      // Rock in hand if has rock
-      if(e.hasRock) {
-        ctx.fillStyle = '#888';
-        ctx.beginPath(); ctx.arc(e.w/1.2, -e.h/2.5, 8, 0, Math.PI*2); ctx.fill();
-      }
-      break;
-    }
-
-    // ── STALKER ─────────────────────────────
-    case 'stalker': {
-      const alpha = e.visible ? 1 : (e.justFired ? 0.7 : 0.15);
-      ctx.globalAlpha = alpha;
-      // Sleek body
-      ctx.fillStyle = e.pC || '#1a4a1a';
-      ctx.beginPath(); ctx.ellipse(0, 0, e.w/2, e.h/3, 0, 0, Math.PI*2); ctx.fill();
-      // Carapace
-      ctx.fillStyle = '#2a6a2a';
-      ctx.beginPath(); ctx.ellipse(0, -e.h/6, e.w/2.5, e.h/4, 0, 0, Math.PI*2); ctx.fill();
-      // 4 glowing eyes
-      ctx.globalAlpha = e.visible ? 1 : (e.justFired ? 0.9 : 0.3);
-      ctx.fillStyle = '#00ff88';
-      [[-e.w/4,-e.h/4],[e.w/4,-e.h/4],[-e.w/6,-e.h/3],[e.w/6,-e.h/3]].forEach(([ex,ey]) => {
-        ctx.beginPath(); ctx.arc(ex, ey, 3, 0, Math.PI*2); ctx.fill();
-      });
-      // Tentacles
-      ctx.globalAlpha = alpha * 0.8;
-      ctx.strokeStyle = '#1a4a1a'; ctx.lineWidth = 3;
-      for(let t2=0; t2<4; t2++) {
-        const ta = (Math.PI/4)*t2 - Math.PI/8;
-        const wave = Math.sin(Date.now()/200 + t2) * 10;
-        ctx.beginPath(); ctx.moveTo(0, e.h/4);
-        ctx.quadraticCurveTo(Math.cos(ta)*20+wave, e.h/2+10, Math.cos(ta)*30, e.h/1.5); ctx.stroke();
-      }
-      ctx.globalAlpha = 1.0;
-      break;
-    }
-
-    // ── SURVEYOR ────────────────────────────
-    case 'surveyor': {
-      const t3 = Date.now() / 300;
-      // Hover bob
-      const hoverY = Math.sin(t3) * 5;
-      ctx.translate(0, hoverY);
-      // Shield bubble (if shielding another enemy)
-      if(e.shielding) {
-        ctx.strokeStyle = 'rgba(0,200,255,0.4)'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(0, 0, e.w/1.5, 0, Math.PI*2); ctx.stroke();
-      }
-      // Body - Hyperion yellow drone
-      ctx.fillStyle = e.pC || '#ffcc00';
-      ctx.beginPath(); ctx.arc(0, 0, e.w/2, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#222';
-      ctx.beginPath(); ctx.arc(0, 0, e.w/3, 0, Math.PI*2); ctx.fill();
-      // Eye scanner
-      ctx.fillStyle = '#00ccff';
-      ctx.beginPath(); ctx.arc(0, 0, e.w/5, 0, Math.PI*2); ctx.fill();
-      // Rotating antennae
-      for(let a=0; a<3; a++) {
-        const aa = (Math.PI*2/3)*a + t3;
-        ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.moveTo(Math.cos(aa)*e.w/3, Math.sin(aa)*e.w/3);
-        ctx.lineTo(Math.cos(aa)*e.w/1.8, Math.sin(aa)*e.w/1.8); ctx.stroke();
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(Math.cos(aa)*e.w/1.8, Math.sin(aa)*e.w/1.8, 3, 0, Math.PI*2); ctx.fill();
-      }
-      break;
-    }
-
-    // ── BADASS PSYCHO ───────────────────────
-    case 'badass_psycho': {
-      // HUGE body
-      ctx.fillStyle = '#cc0000';
-      ctx.beginPath(); ctx.arc(0, 0, e.w/2, 0, Math.PI*2); ctx.fill();
-      // Spiky mask
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(-e.w/3, -e.w/2, e.w*0.65, e.w*0.4);
-      ctx.fillStyle = '#cc0000';
-      ctx.fillRect(-e.w/4, -e.w/2.5, e.w/10, e.w/5);
-      ctx.fillRect(e.w/10, -e.w/2.5, e.w/10, e.w/5);
-      // Eyes - glowing
-      ctx.fillStyle = '#ff0000';
-      ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 15;
-      ctx.beginPath(); ctx.arc(-e.w/6, -e.w/4, 8, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(e.w/6, -e.w/4, 8, 0, Math.PI*2); ctx.fill();
-      ctx.shadowBlur = 0;
-      // Massive axe
-      ctx.strokeStyle = '#888'; ctx.lineWidth = 5;
-      ctx.beginPath(); ctx.moveTo(e.w/2, -e.w/2); ctx.lineTo(e.w/2, e.w/2); ctx.stroke();
-      ctx.fillStyle = '#aaa';
-      ctx.beginPath(); ctx.moveTo(e.w/2, -e.w/2); ctx.lineTo(e.w, -e.w/4); ctx.lineTo(e.w/2, 0); ctx.fill();
-      break;
-    }
+// ── Draw enemy sprite with fallback ───────
+function drawEnemySprite(ctx, img, e, scaleW, scaleH, offsetX, offsetY, flipX) {
+  const w = e.w * (scaleW || 1.8);
+  const h = e.h * (scaleH || 1.8);
+  if (img && img.complete && img.naturalHeight !== 0) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    if (flipX) ctx.scale(-1, 1);
+    // Shadow beneath sprite
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(offsetX||0, h*0.4, w*0.35, h*0.12, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Draw sprite
+    ctx.drawImage(img, (offsetX||0) - w/2, (offsetY||0) - h/2, w, h);
+    ctx.restore();
+  } else {
+    // Fallback canvas shape while loading
+    drawNewEnemyFallback(ctx, e);
   }
+}
 
+// ── Fallback shapes if image not loaded ───
+function drawNewEnemyFallback(ctx, e) {
+  ctx.save(); ctx.translate(e.x, e.y);
+  switch(e.type) {
+    case 'skag':        ctx.fillStyle='#8b6914'; ctx.beginPath(); ctx.ellipse(0,0,e.w/2,e.h/3,0,0,Math.PI*2); ctx.fill(); break;
+    case 'bullymong':   ctx.fillStyle='#5c3d1e'; ctx.beginPath(); ctx.arc(0,0,e.w/2,0,Math.PI*2); ctx.fill(); break;
+    case 'stalker':     ctx.fillStyle='#1a4a1a'; ctx.beginPath(); ctx.ellipse(0,0,e.w/2,e.h/3,0,0,Math.PI*2); ctx.fill(); break;
+    case 'surveyor':    ctx.fillStyle='#ffcc00'; ctx.beginPath(); ctx.arc(0,0,e.w/2,0,Math.PI*2); ctx.fill(); break;
+    case 'badass_psycho': ctx.fillStyle='#cc0000'; ctx.beginPath(); ctx.arc(0,0,e.w/2,0,Math.PI*2); ctx.fill(); break;
+  }
   ctx.restore();
 }
 
-// ── Spawn new enemy types ──────────────────
-function spawnNewEnemy(type, x, y, mMult) {
-  const base = {
-    x, y, fT:0, sT:0, aT:0, pref:'', pC:'',
-    lastX:x, lastY:y
-  };
+// ── Main draw function ────────────────────
+function drawNewEnemy(ctx, e) {
+  // Stalker — fade in/out based on visibility
+  if (e.type === 'stalker') {
+    ctx.globalAlpha = e.visible ? 1.0 : (e.justFired ? 0.6 : 0.15);
+  }
 
-  switch(type) {
+  switch(e.type) {
     case 'skag':
-      return { ...base, type:'skag', hp:800*mMult, maxHp:800*mMult,
-        speed:3.5, w:35, h:25, cd:180, charging:false, chargeTimer:0,
-        packLeader: Math.random() < 0.2 };
+      // Skag faces the player — flip if player is to the left
+      const skagFlip = lhPlayer && lhPlayer.x < e.x;
+      drawEnemySprite(ctx, skagImg, e, 2.2, 2.0, 0, -5, skagFlip);
+      // Charge glow
+      if (e.charging) {
+        ctx.save(); ctx.translate(e.x, e.y);
+        ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 3; ctx.globalAlpha = 0.6;
+        ctx.beginPath(); ctx.arc(0, 0, e.w/1.5, 0, Math.PI*2); ctx.stroke();
+        ctx.restore(); ctx.globalAlpha = 1.0;
+      }
+      break;
 
     case 'bullymong':
-      return { ...base, type:'bullymong', hp:3000*mMult, maxHp:3000*mMult,
-        speed:1.2, w:65, h:65, cd:120, hasRock:true, rockCd:0,
-        isMarksman:true };
+      const bmFlip = lhPlayer && lhPlayer.x < e.x;
+      drawEnemySprite(ctx, bullymongImg, e, 2.2, 2.2, 0, -8, bmFlip);
+      // Rock indicator
+      if (e.hasRock) {
+        ctx.save(); ctx.translate(e.x, e.y);
+        ctx.fillStyle = '#888'; ctx.font = '12px Arial'; ctx.textAlign = 'center';
+        ctx.fillText('🪨', 0, -e.h - 5);
+        ctx.restore();
+      }
+      break;
 
     case 'stalker':
-      return { ...base, type:'stalker', hp:1200*mMult, maxHp:1200*mMult,
-        speed:2.5, w:40, h:30, cd:90, visible:false, justFired:false,
-        visTimer:0 };
+      const stFlip = lhPlayer && lhPlayer.x < e.x;
+      drawEnemySprite(ctx, stalkerImg, e, 2.0, 2.0, 0, -5, stFlip);
+      // Glowing eyes when visible
+      if (e.visible || e.justFired) {
+        ctx.save(); ctx.translate(e.x, e.y);
+        ctx.fillStyle = '#00ff88'; ctx.shadowColor = '#00ff88'; ctx.shadowBlur = 10;
+        ctx.beginPath(); ctx.arc(-8, -10, 4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(8, -10, 4, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0; ctx.restore();
+      }
+      ctx.globalAlpha = 1.0;
+      break;
 
     case 'surveyor':
-      return { ...base, type:'surveyor', hp:600*mMult, maxHp:600*mMult,
-        speed:2.0, w:35, h:35, cd:60, shielding:false, shieldTarget:null,
-        floatY:y, floatTimer:Math.random()*Math.PI*2 };
+      // Surveyor hovers — bob up and down
+      const surveyorBob = Math.sin(Date.now() / 300) * 6;
+      ctx.save();
+      ctx.translate(e.x, e.y + surveyorBob);
+      // Draw shadow on ground
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.beginPath(); ctx.ellipse(0, e.h*0.6 - surveyorBob, e.w*0.4, e.h*0.1, 0, 0, Math.PI*2); ctx.fill();
+      // Rotation effect on the image
+      ctx.rotate(Math.sin(Date.now() / 600) * 0.1);
+      if (surveyorImg.complete && surveyorImg.naturalHeight !== 0) {
+        const sw = e.w * 2.2, sh = e.h * 2.2;
+        ctx.drawImage(surveyorImg, -sw/2, -sh/2, sw, sh);
+      } else {
+        ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(0,0,e.w/2,0,Math.PI*2); ctx.fill();
+      }
+      // Shield beam if shielding
+      if (e.shielding && e.shieldTarget) {
+        ctx.strokeStyle = 'rgba(0,200,255,0.5)'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(0,0);
+        ctx.lineTo(e.shieldTarget.x - e.x, e.shieldTarget.y - e.y); ctx.stroke();
+      }
+      ctx.restore();
+      break;
 
     case 'badass_psycho':
-      return { ...base, type:'badass_psycho', hp:8000*mMult, maxHp:8000*mMult,
-        speed:1.8, w:80, h:80, cd:80, slamCd:0, slamWarning:0 };
+      const bpFlip = lhPlayer && lhPlayer.x < e.x;
+      drawEnemySprite(ctx, badasspsychoImg, e, 2.4, 2.4, 0, -10, bpFlip);
+      // Slam warning ring
+      if (e.slamWarning > 0) {
+        const pulse = Math.sin(Date.now() / 80) * 0.5 + 0.5;
+        ctx.save(); ctx.translate(e.x, e.y);
+        ctx.strokeStyle = `rgba(255,0,0,${pulse})`;
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(0, 0, 120, 0, Math.PI*2); ctx.stroke();
+        ctx.fillStyle = `rgba(255,0,0,${pulse * 0.15})`;
+        ctx.beginPath(); ctx.arc(0, 0, 120, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+      }
+      break;
   }
 }
 
-// ── Update new enemy AI ────────────────────
+// ── Spawn new enemy ────────────────────────
+function spawnNewEnemy(type, x, y, mMult) {
+  const base = { x, y, fT:0, sT:0, aT:0, pref:'', pC:'', lastX:x, lastY:y, flash:0 };
+  switch(type) {
+    case 'skag':
+      return {...base, type:'skag', hp:800*mMult, maxHp:800*mMult, speed:3.5, w:40, h:30, cd:180, charging:false, chargeTimer:0, chargeAng:0, chargeSpd:0};
+    case 'bullymong':
+      return {...base, type:'bullymong', hp:3000*mMult, maxHp:3000*mMult, speed:1.2, w:60, h:60, cd:120, hasRock:true, isMarksman:true};
+    case 'stalker':
+      return {...base, type:'stalker', hp:1200*mMult, maxHp:1200*mMult, speed:2.5, w:45, h:35, cd:90, visible:false, justFired:false, visTimer:0};
+    case 'surveyor':
+      return {...base, type:'surveyor', hp:600*mMult, maxHp:600*mMult, speed:2.0, w:35, h:35, cd:60, shielding:false, shieldTarget:null, floatY:y, floatTimer:Math.random()*Math.PI*2};
+    case 'badass_psycho':
+      return {...base, type:'badass_psycho', hp:8000*mMult, maxHp:8000*mMult, speed:1.8, w:75, h:75, cd:80, slamCd:0, slamWarning:0};
+  }
+}
+
+// ── Enemy AI ──────────────────────────────
 function updateNewEnemyAI(e, lhPlayer, lhEnemyBullets, mayhemMult, lhDmgText, lhParticles, spawnParticles, playSound) {
-  const dx = lhPlayer.x - e.x;
-  const dy = lhPlayer.y - e.y;
+  const dx = lhPlayer.x - e.x, dy = lhPlayer.y - e.y;
   const dist = Math.hypot(dx, dy);
-  const ang = Math.atan2(dy, dx);
+  const ang  = Math.atan2(dy, dx);
 
   switch(e.type) {
 
-    // ── SKAG AI ──────────────────────────────
     case 'skag': {
-      if(dist > 300) {
-        // Chase
+      if (!e.charging) {
         e.x += Math.cos(ang)*e.speed; e.y += Math.sin(ang)*e.speed;
-      } else if(!e.charging) {
-        // Charge wind-up
         e.chargeTimer = (e.chargeTimer||0) + 1;
-        if(e.chargeTimer > 60) {
+        if (e.chargeTimer > 80 && dist < 300) {
           e.charging = true; e.chargeTimer = 0;
-          e.chargeAng = ang; e.chargeSpd = 10;
+          e.chargeAng = ang; e.chargeSpd = 12;
           playSound('ability', e.x);
+          spawnParticles(e.x, e.y, '#ff4400', 10, 3, 15);
         }
-      }
-      if(e.charging) {
+      } else {
         e.x += Math.cos(e.chargeAng)*e.chargeSpd;
         e.y += Math.sin(e.chargeAng)*e.chargeSpd;
-        e.chargeSpd *= 0.92;
-        if(e.chargeSpd < 1) { e.charging = false; e.chargeSpd = 0; }
+        e.chargeSpd *= 0.91;
+        if (e.chargeSpd < 0.8) { e.charging = false; e.chargeTimer = 0; }
       }
       break;
     }
 
-    // ── BULLYMONG AI ─────────────────────────
     case 'bullymong': {
-      if(dist > 200) { e.x += Math.cos(ang)*e.speed; e.y += Math.sin(ang)*e.speed; }
-      // Rock throw
-      if(e.cd <= 0 && dist < 500 && e.hasRock) {
-        playSound('shoot', e.x);
-        // Predict player position
+      if (dist > 180) { e.x += Math.cos(ang)*e.speed; e.y += Math.sin(ang)*e.speed; }
+      if (e.cd !== undefined) e.cd--;
+      if ((e.cd||0) <= 0 && dist < 500) {
         const pVelX = lhPlayer.x - (lhPlayer.lastX||lhPlayer.x);
         const pVelY = lhPlayer.y - (lhPlayer.lastY||lhPlayer.y);
         const tTime = dist / 8;
-        const predAng = Math.atan2((lhPlayer.y + pVelY*tTime) - e.y, (lhPlayer.x + pVelX*tTime) - e.x);
-        lhEnemyBullets.push({
-          x:e.x, y:e.y,
-          vx:Math.cos(predAng)*8, vy:Math.sin(predAng)*8,
-          dmg:35*mayhemMult, c:'#888', isRock:true, size:12
-        });
+        const predAng = Math.atan2((lhPlayer.y+pVelY*tTime)-e.y, (lhPlayer.x+pVelX*tTime)-e.x);
+        lhEnemyBullets.push({x:e.x, y:e.y, vx:Math.cos(predAng)*8, vy:Math.sin(predAng)*8, dmg:35*mayhemMult, c:'#888', isRock:true, size:14});
+        playSound('shoot', e.x);
+        spawnParticles(e.x, e.y, '#888', 5, 2, 10);
         e.cd = 100 + Math.random()*60;
       }
       break;
     }
 
-    // ── STALKER AI ───────────────────────────
     case 'stalker': {
       e.visTimer = (e.visTimer||0) - 1;
-      // Go invisible when not attacking
-      if(e.visTimer <= 0) {
-        e.visible = false; e.justFired = false;
-      }
-      if(dist > 150) {
-        e.x += Math.cos(ang)*e.speed; e.y += Math.sin(ang)*e.speed;
-      }
-      if(e.cd <= 0) {
-        // Become visible briefly, fire burst
-        e.visible = true; e.justFired = true; e.visTimer = 45;
-        for(let s=0; s<3; s++) {
-          const sAng = ang + (Math.random()-0.5)*0.3;
+      if (e.visTimer <= 0) { e.visible = false; e.justFired = false; }
+      if (dist > 120) { e.x += Math.cos(ang)*e.speed; e.y += Math.sin(ang)*e.speed; }
+      if (e.cd !== undefined) e.cd--;
+      if ((e.cd||0) <= 0) {
+        e.visible = true; e.justFired = true; e.visTimer = 50;
+        for (let s=0; s<3; s++) {
+          const sAng = ang + (Math.random()-0.5)*0.25;
           lhEnemyBullets.push({x:e.x, y:e.y, vx:Math.cos(sAng)*7, vy:Math.sin(sAng)*7, dmg:12*mayhemMult, c:'#00ff88'});
         }
         playSound('shoot', e.x);
@@ -266,70 +207,60 @@ function updateNewEnemyAI(e, lhPlayer, lhEnemyBullets, mayhemMult, lhDmgText, lh
       break;
     }
 
-    // ── SURVEYOR AI ──────────────────────────
     case 'surveyor': {
-      // Float above battlefield
       e.floatTimer += 0.02;
-      e.y = e.floatY - 80 + Math.sin(e.floatTimer)*20;
-      // Orbit player at distance
-      const orbitAng = Math.atan2(e.y - lhPlayer.y, e.x - lhPlayer.x) + 0.02;
-      const targetDist = 200;
-      const targetX = lhPlayer.x + Math.cos(orbitAng)*targetDist;
-      const targetY = lhPlayer.y + Math.sin(orbitAng)*targetDist - 80;
-      e.x += (targetX - e.x) * 0.03;
-      e.y += (targetY - e.y) * 0.03;
-      // Fire repair beam at nearest damaged enemy
-      if(e.cd <= 0) {
-        playSound('hit', e.x);
-        // Find most damaged ally
+      const orbitAng = Math.atan2(e.y-lhPlayer.y, e.x-lhPlayer.x) + 0.015;
+      const tX = lhPlayer.x + Math.cos(orbitAng)*220;
+      const tY = lhPlayer.y + Math.sin(orbitAng)*220 - 90;
+      e.x += (tX-e.x)*0.025; e.y += (tY-e.y)*0.025;
+      if (e.cd !== undefined) e.cd--;
+      if ((e.cd||0) <= 0) {
+        // Repair most damaged nearby ally
+        let repaired = false;
         lhEnemies.forEach(ally => {
-          if(ally !== e && ally.hp < ally.maxHp * 0.5 && Math.hypot(ally.x-e.x,ally.y-e.y)<300) {
-            ally.hp = Math.min(ally.maxHp, ally.hp + 500*mayhemMult);
-            lhDmgText.push({x:ally.x, y:ally.y-30, txt:'REPAIRED!', life:30, c:'#00ccff'});
+          if (ally !== e && ally.hp < ally.maxHp*0.6 && Math.hypot(ally.x-e.x,ally.y-e.y)<350) {
+            const healAmt = Math.min(ally.maxHp - ally.hp, 300*mayhemMult);
+            ally.hp += healAmt;
+            e.shielding = true; e.shieldTarget = ally;
+            lhDmgText.push({x:ally.x, y:ally.y-30, txt:`+${Math.floor(healAmt)} REPAIRED`, life:40, c:'#00ccff'});
+            spawnParticles(ally.x, ally.y, '#00ccff', 10, 2, 20);
+            repaired = true;
           }
         });
-        e.cd = 120;
+        if (!repaired) { e.shielding = false; e.shieldTarget = null; }
+        e.cd = 150;
       }
       break;
     }
 
-    // ── BADASS PSYCHO AI ─────────────────────
     case 'badass_psycho': {
       e.x += Math.cos(ang)*e.speed; e.y += Math.sin(ang)*e.speed;
       e.slamCd = (e.slamCd||0) - 1;
-      e.slamWarning = (e.slamWarning||0) - 1;
-      // Ground slam warning
-      if(e.slamCd <= 0 && dist < 200) {
-        if(e.slamWarning <= 0) {
-          e.slamWarning = 60;
-          e.slamCd = 200;
-          lhDmgText.push({x:e.x, y:e.y-60, txt:'⚠ GROUND SLAM!', life:60, c:'#ff0000'});
-          playSound('die', e.x);
-          // After warning, do slam
-          setTimeout(() => {
-            if(!e || e.hp <= 0) return;
-            spawnParticles(e.x, e.y, '#ff4500', 80, 10, 50);
-            const slamDist = Math.hypot(lhPlayer.x-e.x, lhPlayer.y-e.y);
-            if(slamDist < 150) {
-              lhEnemyBullets.push({x:lhPlayer.x, y:lhPlayer.y, vx:0, vy:0, dmg:80*mayhemMult, c:'#f00', instant:true});
-              lhDmgText.push({x:lhPlayer.x, y:lhPlayer.y-40, txt:'SLAM!', life:40, c:'#f00'});
-            }
-          }, 1000);
-        }
+      e.slamWarning = Math.max(0, (e.slamWarning||0) - 1);
+      if ((e.slamCd||0) <= 0 && dist < 220) {
+        e.slamWarning = 60; e.slamCd = 240;
+        playSound('die', e.x);
+        lhDmgText.push({x:e.x, y:e.y-70, txt:'⚠ GROUND SLAM!', life:60, c:'#ff0000'});
+        spawnParticles(e.x, e.y, '#ff4500', 20, 4, 30);
+        setTimeout(() => {
+          if (!e || e.hp <= 0) return;
+          screenShake = 25;
+          spawnParticles(e.x, e.y, '#ff4500', 60, 10, 50);
+          playSound('explosion', e.x);
+          if (Math.hypot(lhPlayer.x-e.x, lhPlayer.y-e.y) < 160) {
+            lhEnemyBullets.push({x:lhPlayer.x, y:lhPlayer.y, vx:0, vy:0, dmg:80*mayhemMult, c:'#f00', instant:true});
+          }
+        }, 1000);
       }
       break;
     }
   }
 }
 
-// ── Draw rock projectile ───────────────────
+// ── Draw rock projectile ──────────────────
 function drawRockProjectile(ctx, b) {
-  ctx.save();
-  ctx.translate(b.x, b.y);
-  ctx.rotate(Date.now()/100);
-  ctx.fillStyle = '#888';
-  ctx.fillRect(-b.size/2, -b.size/2, b.size, b.size);
-  ctx.fillStyle = '#aaa';
-  ctx.fillRect(-b.size/3, -b.size/3, b.size/3, b.size/3);
+  ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(Date.now()/100);
+  ctx.fillStyle='#777'; ctx.fillRect(-b.size/2,-b.size/2,b.size,b.size);
+  ctx.fillStyle='#aaa'; ctx.fillRect(-b.size/3,-b.size/3,b.size/3,b.size/3);
   ctx.restore();
 }
