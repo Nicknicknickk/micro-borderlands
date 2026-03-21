@@ -90,8 +90,13 @@ function startTutorial() {
     lhMouse.screenY = (e.clientY - rect.top)  * (gCanvas.height / rect.height);
   };
   gCanvas.onmousedown = () => {
-    if (tutorialStep >= 4) shootTutorial();
-    else if (tutorialStep < 5) advanceTutorial();
+    if (tutorialStep === 5) {
+      completeTutorial();
+    } else if (tutorialStep === 4 && !tutorialTargetHit) {
+      shootTutorial();
+    } else if (tutorialStep !== 3 && tutorialStep !== 4) {
+      advanceTutorial();
+    }
   };
   gCanvas.onmouseup = null;
 
@@ -133,15 +138,25 @@ function shootTutorial() {
 
 // ── Complete tutorial ─────────────────────
 function completeTutorial() {
+  if (tutorialDone === 1) return; // prevent double trigger
   tutorialDone = 1;
   localStorage.setItem('tutorialDone', 1);
-  inTutorial   = false;
+  inTutorial = false;
   playSound('levelup');
   spawnParticles(400, 225, '#ffcc00', 80, 8, 60);
 
-  // Give player starter pistol & start sanctuary
+  // Drop starter pistol as loot
+  lhLoot.push({
+    x: 400, y: 300,
+    isMod: false,
+    gun: { name: 'Starter Pistol+', c: '#00ff00', dmg: 35, fr: 10, spd: 10, rarity: 1, wType: 'Pistol', timer: 0 },
+    life: 9999
+  });
+
   gCanvas.onmousedown = null;
-  setTimeout(() => { startSanctuary(); }, 1500);
+  setTimeout(() => {
+    startSanctuary();
+  }, 2000);
 }
 
 // ── Main tutorial loop ────────────────────
