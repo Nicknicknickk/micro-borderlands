@@ -22,25 +22,23 @@ window.onYouTubeIframeAPIReady = function () {
   });
 };
 
-function playBGM(videoId) {
+window.playBGM = function playBGM(videoId) {
   currentVideoId = videoId;
   if (!isYtReady) { queuedVideo = videoId; return; }
   ytPlayer.loadVideoById(videoId);
   if (soundEnabled) ytPlayer.playVideo();
-}
+};
 
-function stopBGM() {
+window.stopBGM = function stopBGM() {
   if (isYtReady && typeof ytPlayer.pauseVideo === 'function') ytPlayer.pauseVideo();
-}
+};
 
-// ── Sound Toggle ───────────────────────────
-function toggleSound() {
+window.toggleSound = function toggleSound() {
   soundEnabled = !soundEnabled;
   const btn = document.getElementById('sound-toggle');
-  btn.innerText     = soundEnabled ? '🔊 Sound: ON'  : '🔇 Sound: OFF';
+  btn.innerText         = soundEnabled ? '🔊 Sound: ON'  : '🔇 Sound: OFF';
   btn.style.color       = soundEnabled ? '#00ffcc' : '#ffcc00';
   btn.style.borderColor = soundEnabled ? '#00ffcc' : '#ffcc00';
-
   if (soundEnabled) {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -49,17 +47,15 @@ function toggleSound() {
   } else {
     stopBGM();
   }
-}
+};
 
-// ── Sound Effects ──────────────────────────
-function playSound(type) {
+window.playSound = function playSound(type) {
   if (!soundEnabled || !audioCtx) return;
   const osc  = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   const now = audioCtx.currentTime;
-
   switch (type) {
     case 'coin':
       osc.type = 'sine';
@@ -119,4 +115,4 @@ function playSound(type) {
       osc.start(now); osc.stop(now + 0.6);
       break;
   }
-}
+};
