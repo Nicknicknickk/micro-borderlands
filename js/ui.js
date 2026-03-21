@@ -6,8 +6,9 @@
 window.launchGame = function () {
   mainMenu.style.display      = 'none';
   gameContainer.style.display = 'flex';
-  if (runCount > 0) startSanctuary();
-  else { window.setMusicState('sanctuary'); startLooter(); }
+  if (shouldRunTutorial()) startTutorial();
+  else if (runCount > 0) startSanctuary();
+  else startLooter();
 };
 
 window.goHome = function () {
