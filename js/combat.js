@@ -79,7 +79,6 @@ function startLooter(raid=false,duelTarget=null,underdome=false) {
   inSanctuary=false;inVehicle=false;dayNightTimer=0;
   lhParticles=[];screenShake=0;lhCraters=[];
   hitStopFrames=0;cameraRecoilX=0;cameraRecoilY=0;muzzleFlashes=[];shellCasings=[];
-  initZones();
   initMapSpecials(activeMapIndex);
   isRaidBoss=raid;isDuel=duelTarget!==null;duelOpponent=duelTarget;
   lhExitPortal=null;lhAllies=[];
@@ -91,6 +90,7 @@ function startLooter(raid=false,duelTarget=null,underdome=false) {
   lhEnemies=[];lhBullets=[];lhEnemyBullets=[];lhGrenades=[];
   lhLoot=[];lhDmgText=[];lhShooting=false;lhKills=0;
   lhBossSpawned=false;lhGoliathsSpawned=0;
+  initZones();
 
   const mayhemMult=mayhemMode===50?2500:mayhemMode===20?500:mayhemMode===10?25:1;
 
