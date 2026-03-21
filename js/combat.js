@@ -1,7 +1,47 @@
 /* ==========================================
-   COMBAT.JS — Full combat engine v2.0
-   (with Procedural Audio Engine hooks)
+   COMBAT.JS — Full combat engine v3.0
+   NEW: Hit stop, camera recoil, shell casings,
+        muzzle flash, weapon knockback
    ========================================== */
+
+// ── Game Feel State ───────────────────────
+let hitStopFrames    = 0;       // freeze frames on big hit
+let cameraRecoilX    = 0;       // camera kick X
+let cameraRecoilY    = 0;       // camera kick Y
+let muzzleFlashes    = [];      // [{x,y,ang,life,size}]
+let shellCasings     = [];      // [{x,y,vx,vy,rot,rotV,life,maxLife}]
+
+// ── Spawn muzzle flash ────────────────────
+function spawnMuzzleFlash(x, y, ang, size) {
+  muzzleFlashes.push({ x, y, ang, life: 6, maxLife: 6, size });
+}
+
+// ── Spawn shell casing ────────────────────
+function spawnShellCasing(x, y, ang) {
+  const perpAng = ang - Math.PI / 2;
+  shellCasings.push({
+    x: x + Math.cos(perpAng) * 10,
+    y: y + Math.sin(perpAng) * 10,
+    vx: Math.cos(perpAng) * (2 + Math.random() * 3),
+    vy: Math.sin(perpAng) * (2 + Math.random() * 3) - 3,
+    rot: Math.random() * Math.PI * 2,
+    rotV: (Math.random() - 0.5) * 0.4,
+    life: 40 + Math.floor(Math.random() * 20),
+    maxLife: 60,
+    gravity: 0.25
+  });
+}
+
+// ── Apply camera recoil ───────────────────
+function applyCameraRecoil(ang, strength) {
+  cameraRecoilX -= Math.cos(ang) * strength;
+  cameraRecoilY -= Math.sin(ang) * strength;
+}
+
+// ── Apply hit stop ────────────────────────
+function applyHitStop(frames) {
+  hitStopFrames = Math.max(hitStopFrames, frames);
+}
 
 function checkVehicleExplosion() {
   if (lhPlayer.vehicleHp <= 0) {
@@ -52,6 +92,10 @@ function startLooter(raid = false, duelTarget = null, underdome = false) {
   lhExitPortal = null; lhAllies = [];
   isUnderdome = underdome; underdomeWave = 1; underdomeEnemies = 15; waveDelay = 120;
 
+  // Reset game feel state
+  hitStopFrames = 0; cameraRecoilX = 0; cameraRecoilY = 0;
+  muzzleFlashes = []; shellCasings = [];
+
   for (let i = 0; i < 50; i++) lhCraters.push({ x: Math.random()*WORLD_W, y: Math.random()*WORLD_H, r: 20+Math.random()*50 });
 
   const charClass = localStorage.getItem('borderClass') || 'zero';
@@ -85,7 +129,7 @@ function startLooter(raid = false, duelTarget = null, underdome = false) {
   };
   gCanvas.onmousedown = () => {
     lhShooting = true;
-    window.setMusicState('combat');
+    if (soundEnabled && isYtReady && ytPlayer.getPlayerState()!==1) ytPlayer.playVideo();
   };
   gCanvas.onmouseup = () => lhShooting = false;
   loopLooter();
@@ -94,12 +138,27 @@ function startLooter(raid = false, duelTarget = null, underdome = false) {
 // ─────────────────────────────────────────────────────────
 function loopLooter() {
   if (inSanctuary||isBossMode||inBank||inBadass||inInventory||inSkills) return;
-  ctx.clearRect(0,0,gCanvas.width,gCanvas.height);
+
+  // ── Hit stop — skip frame logic ───────────
+  if (hitStopFrames > 0) {
+    hitStopFrames--;
+    // Still draw but don't update game logic
+    animId = requestAnimationFrame(loopLooter);
+    return;
+  }
+
+  ctx.clearRect(0, 0, gCanvas.width, gCanvas.height);
   dayNightTimer++;
 
   const mayhemMult = mayhemMode===50?2500:mayhemMode===20?500:mayhemMode===10?25:1;
   const elemDur    = (equippedCMod==='Witch'&&lhPlayer.char==='maya')?600:300;
   const elemMult   = mayhemMult*((equippedCMod==='Witch'&&lhPlayer.char==='maya')?2:1)*(1+lhPlayer.mods.elem);
+
+  // ── Camera recoil smooth recovery ─────────
+  cameraRecoilX *= 0.75;
+  cameraRecoilY *= 0.75;
+  if (Math.abs(cameraRecoilX) < 0.1) cameraRecoilX = 0;
+  if (Math.abs(cameraRecoilY) < 0.1) cameraRecoilY = 0;
 
   // ── Win / Death ───────────────────────────
   if (lhPlayer.dead || lhPlayer.win) {
@@ -121,7 +180,6 @@ function loopLooter() {
     ctx.textAlign='left'; animId=requestAnimationFrame(loopLooter); return;
   }
 
-  // ── Vehicle ───────────────────────────────
   if (lhPlayer.vehicleCooldown>0) lhPlayer.vehicleCooldown--;
   else if (!inVehicle&&lhPlayer.vehicleHp<=0) lhPlayer.vehicleHp=lhPlayer.maxVehicleHp;
 
@@ -133,11 +191,10 @@ function loopLooter() {
     } else if (hasVehicle&&lhPlayer.vehicleCooldown>0) {
       playSound('hit'); lhDmgText.push({x:lhPlayer.x,y:lhPlayer.y-40,txt:'VEHICLE REPAIRING...',life:40,c:'#888'});
     } else if (isRaidBoss||isDuel) {
-      playSound('hit'); lhDmgText.push({x:lhPlayer.x,y:lhPlayer.y-40,txt:'VEHICLES DISABLED IN ARENA!',life:40,c:'#f00'});
+      playSound('hit'); lhDmgText.push({x:lhPlayer.x,y:lhPlayer.y-40,txt:'VEHICLES DISABLED!',life:40,c:'#f00'});
     }
   }
 
-  // ── Movement ──────────────────────────────
   const baseSpd = inVehicle?12:5;
   let spd = baseSpd+(rankSpeed*0.5)+(activeMapIndex===1?3:0);
   if (lhPlayer.char==='krieg'&&lhPlayer.skillTimer>0) spd*=1.5;
@@ -149,16 +206,13 @@ function loopLooter() {
     spawnParticles(lhPlayer.x,lhPlayer.y+15,'#555',1,1,15);
   }
 
-  // ── Passive regen ─────────────────────────
   if (equippedCMod==='Survivor'&&Math.random()<0.05&&lhPlayer.hp<lhPlayer.maxHp) lhPlayer.hp++;
   if (equippedCMod==='Nurse'&&lhPlayer.char==='maya'&&Math.random()<0.1&&lhPlayer.hp<lhPlayer.maxHp) lhPlayer.hp+=2;
   if (lhPlayer.char==='salvador'&&lhPlayer.skillTimer>0&&Math.random()<0.2&&lhPlayer.hp<lhPlayer.maxHp) lhPlayer.hp+=5;
 
-  // ── Shield recharge ───────────────────────
   if (lhPlayer.shieldRechargeDelay>0) lhPlayer.shieldRechargeDelay--;
   else if (lhPlayer.shield<lhPlayer.maxShield) { lhPlayer.shield+=0.5; if(lhPlayer.shield>lhPlayer.maxShield) lhPlayer.shield=lhPlayer.maxShield; }
 
-  // ── Skill [E] ─────────────────────────────
   if ((keys['KeyE']||keys['e'])&&lhPlayer.skillCooldown<=0&&!inVehicle) {
     const onPortal=lhExitPortal&&Math.hypot(lhPlayer.x-lhExitPortal.x,lhPlayer.y-lhExitPortal.y)<50;
     if (!onPortal) {
@@ -178,7 +232,6 @@ function loopLooter() {
     }
   }
 
-  // ── Krieg melee ───────────────────────────
   if (lhPlayer.char==='krieg'&&lhPlayer.skillTimer>0&&lhPlayer.skillTimer%10===0) {
     const meleeDmg=500*(1+rankDmg*0.15)*(mayhemMode>0?mayhemMode/2:1)*(1+lhPlayer.mods.melee)*(equippedCMod==='Meat'?1.5:1);
     lhEnemies.forEach(e=>{
@@ -192,18 +245,16 @@ function loopLooter() {
   if (lhPlayer.skillTimer>0) lhPlayer.skillTimer--;
   if (lhPlayer.skillCooldown>0) lhPlayer.skillCooldown--;
 
-  // ── Camera ────────────────────────────────
   lhCam.x=Math.max(0,Math.min(lhPlayer.x-400,WORLD_W-800));
   lhCam.y=Math.max(0,Math.min(lhPlayer.y-225,WORLD_H-450));
   const targetX=lhMouse.screenX+lhCam.x;
   const targetY=lhMouse.screenY+lhCam.y;
 
-  // ── Grenades [G] ─────────────────────────
   if (lhPlayer.grenadeCooldown>0) lhPlayer.grenadeCooldown--;
   if ((keys['KeyG']||keys['g'])&&lhPlayer.grenades>0&&lhPlayer.grenadeCooldown<=0&&!inVehicle) {
     keys['KeyG']=false; keys['g']=false;
     lhPlayer.grenades--; localStorage.setItem('borderGrenades',lhPlayer.grenades);
-    lhPlayer.grenadeCooldown=60; playShootSound('Launcher', lhPlayer.x);
+    lhPlayer.grenadeCooldown=60; playShootSound('Launcher',lhPlayer.x);
     const gAng=Math.atan2(targetY-lhPlayer.y,targetX-lhPlayer.x);
     let gDmg=400*(1+rankDmg*0.15); let gRad=150;
     if(equippedGMod==='Fastball'){gDmg*=3;gRad=50;} if(equippedGMod==='Bonus Package'){gRad=300;}
@@ -211,19 +262,34 @@ function loopLooter() {
     lhGrenades.push({x:lhPlayer.x,y:lhPlayer.y,vx:Math.cos(gAng)*12,vy:Math.sin(gAng)*12,timer:75,dmg:gDmg,radius:gRad});
   }
 
-  // ── Shooting ──────────────────────────────
+  // ── Shooting with game feel ────────────────
   if (lhPlayer.gun.timer>0) lhPlayer.gun.timer--;
   if (lhShooting&&lhPlayer.gun.timer<=0&&!inVehicle&&lhPlayer.char!=='krieg') {
     if (!(lhPlayer.char==='krieg'&&lhPlayer.skillTimer>0)) {
-      // ── Use weapon-type specific sound ────
-      playShootSound(lhPlayer.gun.wType||'Pistol', lhPlayer.x);
+      const ang = Math.atan2(targetY-lhPlayer.y, targetX-lhPlayer.x);
+      const gType = lhPlayer.gun.wType||'Pistol';
+
+      playShootSound(gType, lhPlayer.x);
+
+      // ── Camera recoil per weapon type ──────
+      const recoilStr = gType==='Launcher'?8:gType==='Sniper'?6:gType==='Shotgun'?5:gType==='SMG'?1:2;
+      applyCameraRecoil(ang, recoilStr);
+
+      // ── Screen shake per weapon type ───────
+      screenShake = gType==='Launcher'?12:gType==='Sniper'?8:gType==='Shotgun'?6:gType==='SMG'?1:3;
+
+      // ── Muzzle flash ───────────────────────
+      const muzzleSize = gType==='Launcher'?35:gType==='Shotgun'?28:gType==='Sniper'?20:gType==='SMG'?14:18;
+      spawnMuzzleFlash(lhPlayer.x + Math.cos(ang)*20, lhPlayer.y + Math.sin(ang)*20, ang, muzzleSize);
+
+      // ── Shell casing (not for launcher) ────
+      if (gType !== 'Launcher') spawnShellCasing(lhPlayer.x, lhPlayer.y, ang);
 
       let frMult=1-lhPlayer.mods.fr;
       if(equippedCMod==='Cat'&&lhPlayer.char==='maya')frMult*=0.7;
       if(equippedCMod==='Berserker'&&lhPlayer.char==='salvador')frMult*=0.7;
       lhPlayer.gun.timer=Math.max(1,(lhPlayer.gun.fr*frMult)-rankFireRate);
 
-      const ang=Math.atan2(targetY-lhPlayer.y,targetX-lhPlayer.x);
       const skillDmgMult=(lhPlayer.char==='zero'&&lhPlayer.skillTimer>0)?4:1;
       if(lhPlayer.char==='zero'&&lhPlayer.skillTimer>0) lhPlayer.skillTimer=0;
 
@@ -233,7 +299,6 @@ function loopLooter() {
       const finalDmg=(lhPlayer.gun.dmg*skillDmgMult*cModDmg*(1+lhPlayer.mods.dmg))*(1+(rankDmg*0.15));
       const isEtech=lhPlayer.gun.rarity===5;
       const isPearl=lhPlayer.gun.rarity===6;
-      const gType=lhPlayer.gun.wType||'Pistol';
       const isSnipe=gType==='Sniper';
 
       const fireBullet=(aOff,isRckt)=>{
@@ -317,7 +382,8 @@ function loopLooter() {
   // DRAW WORLD
   // ─────────────────────────────────────────
   ctx.save();
-  ctx.translate(-lhCam.x,-lhCam.y);
+  // Apply camera + recoil offset
+  ctx.translate(-lhCam.x + cameraRecoilX, -lhCam.y + cameraRecoilY);
   if(screenShake>0){ctx.translate((Math.random()-0.5)*screenShake,(Math.random()-0.5)*screenShake);screenShake*=0.9;if(screenShake<0.5)screenShake=0;}
 
   const mD=mapData[activeMapIndex];
@@ -327,9 +393,24 @@ function loopLooter() {
   lhCraters.forEach(c=>{ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,Math.PI*2);ctx.fill();});
   ctx.strokeStyle=isNight?'#111':mD.line; ctx.lineWidth=2;
   for(let i=0;i<WORLD_W;i+=100){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,WORLD_H);ctx.stroke();}
-  for(let i=0;i<WORLD_H;i+=100){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(WORLD_W,i);ctx.stroke();}
+  for(let i=0;i<WORLD_H;i+=100){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(WORLD_H,i);ctx.stroke();}
   ctx.strokeStyle=mayhemMode===50?'#ff00ff':mayhemMode===20?'#800080':mayhemMode===10?'#ff0000':'#ff007f';
   ctx.lineWidth=10; ctx.strokeRect(0,0,WORLD_W,WORLD_H);
+
+  // ── Shell casings ─────────────────────────
+  for(let i=shellCasings.length-1;i>=0;i--) {
+    const s=shellCasings[i];
+    s.x+=s.vx; s.y+=s.vy; s.vy+=s.gravity;
+    s.vx*=0.96; s.rot+=s.rotV; s.life--;
+    ctx.globalAlpha = s.life/s.maxLife;
+    ctx.save();
+    ctx.translate(s.x,s.y); ctx.rotate(s.rot);
+    ctx.fillStyle='#c8a000';
+    ctx.fillRect(-3,-1.5,6,3);
+    ctx.restore();
+    if(s.life<=0) shellCasings.splice(i,1);
+  }
+  ctx.globalAlpha=1.0;
 
   // Exit portal
   if(lhExitPortal){
@@ -362,12 +443,10 @@ function loopLooter() {
   for(let i=lhEnemies.length-1;i>=0;i--){
     const e=lhEnemies[i];
 
-    // Caustic crater damage
     if(activeMapIndex===2&&e.deathTimer===undefined){
       lhCraters.forEach(c=>{if(Math.hypot(e.x-c.x,e.y-c.y)<c.r){e.hp-=20*mayhemMult;e.aT=60;if(Math.random()<0.1)spawnParticles(e.x,e.y,'#48ff00',1,1,10);}});
     }
 
-    // Loader death timer
     if(e.type==='loader'&&e.hp<=0&&e.deathTimer===undefined){e.deathTimer=60;e.speed=0;playSound('hit',e.x);continue;}
     if(e.deathTimer!==undefined){
       e.deathTimer--;
@@ -390,7 +469,6 @@ function loopLooter() {
       continue;
     }
 
-    // Boss attack patterns
     if(e.cd!==undefined){e.cd--;
       if(e.cd<=0){
         const bAng=Math.atan2(lhPlayer.y-e.y,lhPlayer.x-e.x);
@@ -421,21 +499,17 @@ function loopLooter() {
             const dist=Math.hypot(lhPlayer.x-e.x,lhPlayer.y-e.y);const time=dist/bSpd;
             ang=Math.atan2((lhPlayer.y+pvy*time)-e.y,(lhPlayer.x+pvx*time)-e.x);
           } else {ang=bAng;if(runCount<5&&e.type!=='loader')ang+=(Math.random()-0.5)*0.8;}
-          const bCol=e.type==='loader'?'#ffcc00':'#ff4500';
-          lhEnemyBullets.push({x:e.x,y:e.y,vx:Math.cos(ang)*bSpd,vy:Math.sin(ang)*bSpd,dmg:bDmg,c:bCol});
+          lhEnemyBullets.push({x:e.x,y:e.y,vx:Math.cos(ang)*bSpd,vy:Math.sin(ang)*bSpd,dmg:bDmg,c:e.type==='loader'?'#ffcc00':'#ff4500'});
           playShootSound(e.type==='loader'?'SMG':'Pistol',e.x);
-          const baseCd=e.type==='loader'?80:90,varCd=e.type==='loader'?40:60;
-          e.cd=(baseCd-(runCount>=5?20:0))+Math.random()*(varCd-(runCount>=5?10:0));
+          e.cd=(e.type==='loader'?80:90)-(runCount>=5?20:0)+Math.random()*((e.type==='loader'?40:60)-(runCount>=5?10:0));
         }
       }
     }
 
-    // Elemental DoTs
     if(e.fT>0){e.fT--;if(e.fT%30===0){const d=Math.floor(10*fireLvl*elemMult);e.hp-=d;lhDmgText.push({x:e.x+(Math.random()*20-10),y:e.y-20,txt:d,life:30,c:'#ff4500'});playSound('hit',e.x);}if(e.fT%5===0)lhParticles.push({x:e.x+(Math.random()*20-10),y:e.y+10,vx:(Math.random()-0.5),vy:-2-Math.random()*2,c:'#ff4500',life:20,maxLife:20,size:Math.random()*4+2});}
     if(e.sT>0){e.sT--;if(e.sT%30===10){const d=Math.floor(10*shockLvl*elemMult);e.hp-=d;lhDmgText.push({x:e.x+(Math.random()*20-10),y:e.y-20,txt:d,life:30,c:'#00ffff'});playSound('hit',e.x);}if(e.sT%8===0)lhParticles.push({x:e.x,y:e.y,vx:(Math.random()-0.5)*8,vy:(Math.random()-0.5)*8,c:'#00ffff',life:10,maxLife:10,size:2});}
     if(e.aT>0){e.aT--;if(e.aT%30===20){const d=Math.floor(10*acidLvl*elemMult);e.hp-=d;lhDmgText.push({x:e.x+(Math.random()*20-10),y:e.y-20,txt:d,life:30,c:'#32cd32'});playSound('hit',e.x);}if(e.aT%10===0)lhParticles.push({x:e.x+(Math.random()*20-10),y:e.y+(Math.random()*20-10),vx:0,vy:-0.5,c:'#32cd32',life:40,maxLife:40,size:Math.random()*6+3});}
 
-    // HP reaches zero
     if(e.hp<=0){
       spawnParticles(e.x,e.y,'#ff0000',40,5,30);
       const isBoss=e.type==='boss_goliath'||e.type==='boss'||e.type==='raid_boss'||e.type==='crawmerax'||e.type==='pete'||e.type.includes('_boss');
@@ -477,7 +551,6 @@ function loopLooter() {
     else if(e.type==='moxxi_boss'){ctx.fillStyle='#ff007f';ctx.font='bold 20px Courier';ctx.fillText('MAD MOXXI',e.x-e.w/2,e.y-e.h/2-20);if(moxxiImg.complete&&moxxiImg.naturalHeight!==0)ctx.drawImage(moxxiImg,e.x-e.w/2,e.y-e.h/2,e.w,e.h);else drawPixelSprite(ctx,'maya',e.x,e.y,e.w);}
     else{if(psychoImg.complete&&psychoImg.naturalHeight!==0)ctx.drawImage(psychoImg,e.x-e.w/2,e.y-e.h/2,e.w,e.h);else drawPixelSprite(ctx,'psycho',e.x,e.y,e.w);}
 
-    // Hit flash
     if(e.flash>0){e.flash--;ctx.fillStyle='rgba(255,255,255,0.6)';ctx.fillRect(e.x-e.w/2,e.y-e.h/2,e.w,e.h);}
 
     // Contact damage
@@ -493,12 +566,11 @@ function loopLooter() {
       if(lhPlayer.char==='salvador'&&lhPlayer.skillTimer>0)dmgTaken*=0.5;
       if(lhPlayer.char==='krieg'&&lhPlayer.skillTimer>0)dmgTaken*=0.5;
       lhPlayer.shieldRechargeDelay=180;
-      const wasShielded = lhPlayer.shield > 0;
+      const wasShielded=lhPlayer.shield>0;
       if(lhPlayer.shield>0){if(lhPlayer.shield>=dmgTaken){lhPlayer.shield-=dmgTaken;dmgTaken=0;}else{dmgTaken-=lhPlayer.shield;lhPlayer.shield=0;}}
       lhPlayer.hp-=dmgTaken;
-      // ── Play correct damage sound ────────
-      playDamageSound(wasShielded, e.x);
-      if(!wasShielded && lhPlayer.shield<=0 && lhPlayer.shield < lhPlayer.maxShield*0.1) playSound('shield_break');
+      playDamageSound(wasShielded,e.x);
+      if(!wasShielded&&lhPlayer.shield<=0&&lhPlayer.shield<lhPlayer.maxShield*0.1)playSound('shield_break');
       spawnParticles(lhPlayer.x,lhPlayer.y,wasShielded?'#00aaff':'#ff0000',10,4,15);
       e.x-=Math.cos(Math.atan2(lhPlayer.y-e.y,lhPlayer.x-e.x))*(activeMapIndex===3?90:30);
       if(lhPlayer.hp<=0)lhPlayer.dead=true;
@@ -518,6 +590,7 @@ function loopLooter() {
       if(Math.hypot(b.x-e.x,b.y-e.y)<(e.w/2+(b.isRocket?10:4))){
         if(b.isRocket){
           playSound('explosion',b.x);spawnParticles(b.x,b.y,'#ff8c00',40,6,30);screenShake=10;
+          applyHitStop(4);
           lhEnemies.forEach(aoeE=>{if(Math.hypot(b.x-aoeE.x,b.y-aoeE.y)<150&&aoeE.deathTimer===undefined){let rDmg=b.dmg;if(aoeE.pref==='Armored'&&acidLvl===0)rDmg*=0.5;aoeE.hp-=rDmg;aoeE.flash=5;lhDmgText.push({x:aoeE.x,y:aoeE.y-aoeE.h/2,txt:'BOOM! '+Math.floor(rDmg),life:40,c:'#ff8c00'});if(fireLvl>0)aoeE.fT=elemDur;if(shockLvl>0)aoeE.sT=elemDur;if(acidLvl>0)aoeE.aT=elemDur;}});
           lhBullets.splice(i,1);hitSomething=true;break;
         } else {
@@ -526,8 +599,19 @@ function loopLooter() {
           const isCrit=Math.random()<cChance;
           let finalDmg=b.dmg*(isCrit?cMult:1);
           if(e.pref==='Armored'&&acidLvl===0)finalDmg*=0.5;
-          e.hp-=finalDmg;e.flash=5;
-          // ── Crit vs normal hit sound ─────
+          e.hp-=finalDmg; e.flash=5;
+
+          // ── Hit stop on crit or big hit ────
+          if(isCrit) applyHitStop(b.isSniper?6:3);
+          else if(finalDmg > 200) applyHitStop(2);
+
+          // ── Knockback per weapon type ──────
+          const kbType = lhPlayer.gun.wType || 'Pistol';
+          const kbStr  = kbType==='Launcher'?80:kbType==='Shotgun'?50:kbType==='Sniper'?40:kbType==='SMG'?8:15;
+          const kbAng  = Math.atan2(e.y-lhPlayer.y,e.x-lhPlayer.x);
+          e.x += Math.cos(kbAng)*kbStr; e.y += Math.sin(kbAng)*kbStr;
+          e.x = Math.max(20,Math.min(WORLD_W-20,e.x)); e.y = Math.max(20,Math.min(WORLD_H-20,e.y));
+
           if(isCrit) playSound('hit_crit',e.x); else playSound('hit',e.x);
           lhDmgText.push({x:e.x+(Math.random()*30-15),y:e.y-e.h/2,txt:isCrit?`CRIT! ${Math.floor(finalDmg)}`:Math.floor(finalDmg),life:isCrit?45:30,c:isCrit?'#ff0000':e.pref==='Armored'?'#ffaa00':finalDmg>50?'#ff0':'#fff'});
           spawnParticles(b.x,b.y,'#ffff00',6,3,15);
@@ -556,21 +640,44 @@ function loopLooter() {
       const wasShielded=lhPlayer.shield>0;
       if(lhPlayer.shield>0){if(lhPlayer.shield>=dmgTaken){lhPlayer.shield-=dmgTaken;dmgTaken=0;}else{dmgTaken-=lhPlayer.shield;lhPlayer.shield=0;}}
       lhPlayer.hp-=dmgTaken;
-      playDamageSound(wasShielded, b.x);
+      playDamageSound(wasShielded,b.x);
       spawnParticles(lhPlayer.x,lhPlayer.y,wasShielded?'#00aaff':'#ff0000',10,4,15);
       if(lhPlayer.hp<=0)lhPlayer.dead=true;lhEnemyBullets.splice(i,1);
-    } else if(inVehicle&&dist<35){
+    }else if(inVehicle&&dist<35){
       playSound('hit',b.x);lhPlayer.vehicleHp-=b.dmg;
       spawnParticles(b.x,b.y,'#ff6600',5,2,10);lhEnemyBullets.splice(i,1);checkVehicleExplosion();
     }
   }
 
-  // ── Damage text & particles ───────────────
+  // ── Muzzle flashes ────────────────────────
+  for(let i=muzzleFlashes.length-1;i>=0;i--){
+    const mf=muzzleFlashes[i]; mf.life--;
+    const prog=mf.life/mf.maxLife;
+    ctx.save(); ctx.translate(mf.x,mf.y); ctx.rotate(mf.ang);
+    // Outer glow
+    ctx.globalAlpha=prog*0.6;
+    ctx.fillStyle='#ff8800';
+    ctx.beginPath();ctx.arc(0,0,mf.size*prog,0,Math.PI*2);ctx.fill();
+    // Inner bright
+    ctx.globalAlpha=prog;
+    ctx.fillStyle='#ffffff';
+    ctx.beginPath();ctx.arc(0,0,mf.size*0.4*prog,0,Math.PI*2);ctx.fill();
+    // Streaks
+    ctx.strokeStyle='#ffcc00';ctx.lineWidth=2;ctx.globalAlpha=prog*0.8;
+    for(let s=0;s<5;s++){
+      const sa=(Math.PI*2/5)*s;
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(sa)*mf.size*prog,Math.sin(sa)*mf.size*prog);ctx.stroke();
+    }
+    ctx.restore(); ctx.globalAlpha=1.0;
+    if(mf.life<=0) muzzleFlashes.splice(i,1);
+  }
+
+  // Damage text & particles
   for(let i=lhDmgText.length-1;i>=0;i--){const d=lhDmgText[i];d.y-=1;d.life--;ctx.fillStyle=d.c;ctx.font='bold 16px Courier';ctx.textAlign='center';ctx.fillText(d.txt,d.x,d.y);ctx.textAlign='left';if(d.life<=0)lhDmgText.splice(i,1);}
   updateAndDrawParticles();
   updateAndDrawLoot(false);
 
-  // ── Draw Player ───────────────────────────
+  // Draw Player
   if(inVehicle){drawPixelSprite(ctx,'vehicle',lhPlayer.x,lhPlayer.y,35);}
   else{
     drawPixelSprite(ctx,lhPlayer.char,lhPlayer.x,lhPlayer.y,30);
@@ -603,7 +710,6 @@ function loopLooter() {
   else if(lhPlayer.skillCooldown<=0){ctx.fillStyle='#0f0';ctx.fillText('[E] SKILL READY',650,25);}
   else{ctx.fillStyle='#888';ctx.fillText(`[E] CD: ${Math.ceil(lhPlayer.skillCooldown/60)}s`,650,25);}
 
-  // Boss health bar
   if(lhBossSpawned){
     const theBoss=lhEnemies.find(e=>e.type.includes('boss')||e.type==='crawmerax'||e.type==='pete'||e.type==='terramorphous');
     if(theBoss&&theBoss.hp>0){
@@ -614,7 +720,6 @@ function loopLooter() {
     }
   }
 
-  // Underdome
   if(isUnderdome){
     ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(250,60,300,50);ctx.strokeStyle='#ff007f';ctx.lineWidth=2;ctx.strokeRect(250,60,300,50);
     ctx.fillStyle='#ff007f';ctx.font='bold 24px Courier';ctx.textAlign='center';ctx.fillText(`WAVE ${underdomeWave}`,400,82);
@@ -625,10 +730,9 @@ function loopLooter() {
   else if(mayhemMode===20){ctx.fillStyle='purple';ctx.font='bold 30px Courier';ctx.fillText('MAYHEM 20',630,55);}
   else if(mayhemMode===10){ctx.fillStyle='red';ctx.font='bold 30px Courier';ctx.fillText('MAYHEM 10',630,55);}
 
-  // ── Drive adaptive music ──────────────────
-  const hasBoss = lhBossSpawned && lhEnemies.some(e => e.type.includes('boss') || e.type === 'crawmerax' || e.type === 'pete' || e.type === 'terramorphous');
-  updateMusicIntensity(lhEnemies.length, hasBoss);
+  const hasBoss=lhBossSpawned&&lhEnemies.some(e=>e.type.includes('boss')||e.type==='crawmerax'||e.type==='pete'||e.type==='terramorphous');
+  updateMusicIntensity(lhEnemies.length,hasBoss);
 
-  statusText.innerText='WASD: Move | Click: Shoot | E: Skill | G: Grenade | F: Pick Up | B: Beam to Vault | I: Inventory';
+  statusText.innerText='WASD: Move | Click: Shoot | E: Skill | G: Grenade | F: Pick Up | B: Vault | I: Inventory';
   animId=requestAnimationFrame(loopLooter);
 }
