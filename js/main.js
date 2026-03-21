@@ -5,8 +5,7 @@
 // ── Boot ───────────────────────────────────
 updateMenuStats();
 
-// ── Toggle Sound (exposed to HTML) ─────────
-window.toggleSound = toggleSound;
+// NOTE: toggleSound is already window.toggleSound in audio.js
 
 // ── Player builder helper ──────────────────
 function buildPlayer(charClass) {
