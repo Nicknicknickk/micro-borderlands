@@ -148,8 +148,8 @@ const stalkerImg     = new Image();
 const surveyorImg    = new Image();
 const badasspsychoImg = new Image();
 
-skagImg.src         = 'sprites/skag.png';
-bullymongImg.src    = 'sprites/bullymong.png';
-stalkerImg.src      = 'sprites/stalker.png';
-surveyorImg.src     = 'sprites/surveyor.png';
-badasspsychoImg.src = 'sprites/badass_psycho.png';
+skagImg.src         = 'sprites/skag.jpg';
+bullymongImg.src    = 'sprites/bullymong.jpg';
+stalkerImg.src      = 'sprites/stalker.jpg';
+surveyorImg.src     = 'sprites/surveyor.jpg';
+badasspsychoImg.src = 'sprites/badass_psycho.jpg';
