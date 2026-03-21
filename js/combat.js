@@ -45,6 +45,7 @@ function spawnEnemy(ex, ey, pBase, pVar, mMult) {
 // ─────────────────────────────────────────────────────────
 function startLooter(raid = false, duelTarget = null, underdome = false) {
   if (animId) cancelAnimationFrame(animId);
+  if (currentAudio) { try { currentAudio.pause(); currentAudio.src=''; } catch(e){} currentAudio=null; }
   gCanvas.style.cursor = 'crosshair';
   inSanctuary = false; inVehicle = false; dayNightTimer = 0;
   lhParticles = []; screenShake = 0; lhCraters = [];
