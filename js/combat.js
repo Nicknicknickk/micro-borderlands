@@ -106,7 +106,7 @@ function startLooter(raid=false,duelTarget=null,underdome=false) {
   }
 
   gCanvas.onmousemove=(e)=>{const rect=gCanvas.getBoundingClientRect();lhMouse.screenX=(e.clientX-rect.left)*(gCanvas.width/rect.width);lhMouse.screenY=(e.clientY-rect.top)*(gCanvas.height/rect.height);};
-  gCanvas.onmousedown=()=>{lhShooting=true;if(soundEnabled&&isYtReady&&ytPlayer.getPlayerState()!==1)ytPlayer.playVideo();};
+  gCanvas.onmousedown=()=>{lhShooting=true;};
   gCanvas.onmouseup=()=>lhShooting=false;
   loopLooter();
 }
