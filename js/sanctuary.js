@@ -4,7 +4,6 @@
 
 function startSanctuary() {
   if (animId) cancelAnimationFrame(animId);
-  if (currentAudio) { try { currentAudio.pause(); currentAudio.src=''; } catch(e){} currentAudio=null; }
   gCanvas.style.cursor = 'default';
   inSanctuary = true; inVehicle = false;
   lhParticles = []; slotsSpinTimer = 0; dayNightTimer = 0;
