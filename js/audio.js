@@ -1,50 +1,34 @@
 /* ==========================================
-   AUDIO.JS — Music Engine v3.0
-   Real MP3 tracks with adaptive shuffling
-   + Procedural SFX engine
+   AUDIO.JS — Music Engine v3.1
+   Fixed: no overlapping tracks
    ========================================== */
 
 // ── Track Lists ───────────────────────────
 const TRACKS = {
-  sanctuary: [
-    'sanctuary_1.mp3',
-    'sanctuary_2.mp3'
-  ],
-  combat: [
-    'combat_1.mp3',
-    'combat_2.mp3',
-    'combat_3.mp3',
-    'combat_4.mp3'
-  ],
-  boss: [
-    'boss_1.mp3',
-    'boss_2.mp3',
-    'boss_3.mp3',
-    'boss_4.mp3',
-    'boss_5.mp3'
-  ]
+  sanctuary: ['sanctuary_1.mp3','sanctuary_2.mp3'],
+  combat:    ['combat_1.mp3','combat_2.mp3','combat_3.mp3','combat_4.mp3'],
+  boss:      ['boss_1.mp3','boss_2.mp3','boss_3.mp3','boss_4.mp3','boss_5.mp3']
 };
 
 // ── Music State ───────────────────────────
-let currentMusicState  = 'none';
-let currentAudio       = null;
-let nextAudio          = null;
-let lastTrackIndex     = { sanctuary: -1, combat: -1, boss: -1 };
-let musicEnabled       = false;
-let fadeInterval       = null;
-let musicVolume        = 0.4;
+let currentMusicState = 'none';
+let currentAudio      = null;
+let lastTrackIndex    = { sanctuary:-1, combat:-1, boss:-1 };
+let musicEnabled      = false;
+let fadeInterval      = null;
+let musicVolume       = 0.4;
 
-// ── SFX Audio Context ─────────────────────
-let audioCtx           = null;
-let soundEnabled       = false;
-let sfxGain            = null;
-let masterGain         = null;
-let musicIntensity     = 0;
-let intensityTarget    = 0;
+// ── SFX ───────────────────────────────────
+let audioCtx       = null;
+let soundEnabled   = false;
+let sfxGain        = null;
+let masterGain     = null;
+let musicIntensity = 0;
+let intensityTarget= 0;
 
-// ── Pick a random track, no repeats ───────
+// ── Pick random track, no repeats ─────────
 function pickTrack(state) {
-  const list  = TRACKS[state];
+  const list = TRACKS[state];
   let idx;
   do { idx = Math.floor(Math.random() * list.length); }
   while (list.length > 1 && idx === lastTrackIndex[state]);
@@ -52,196 +36,153 @@ function pickTrack(state) {
   return list[idx];
 }
 
-// ── Create & preload an Audio element ─────
-function createAudio(filename) {
-  const audio     = new Audio(filename);
-  audio.loop      = true;
-  audio.volume    = 0;
-  audio.preload   = 'auto';
-  return audio;
-}
-
-// ── Crossfade from current to next track ──
-function crossfadeTo(filename, onComplete) {
-  if (fadeInterval) clearInterval(fadeInterval);
-
-  // ── Kill ALL existing audio before starting new ──
+// ── Kill all audio immediately ─────────────
+function killAllAudio() {
+  if (fadeInterval) { clearInterval(fadeInterval); fadeInterval = null; }
   if (currentAudio) {
     try { currentAudio.pause(); currentAudio.src = ''; } catch(e) {}
     currentAudio = null;
   }
-  if (nextAudio) {
-    try { nextAudio.pause(); nextAudio.src = ''; } catch(e) {}
-    nextAudio = null;
-  }
+}
+
+// ── Create audio element ───────────────────
+function createAudio(filename) {
+  const audio  = new Audio(filename);
+  audio.loop   = true;
+  audio.volume = 0;
+  return audio;
+}
+
+// ── Crossfade to new track ─────────────────
+function crossfadeTo(filename) {
+  killAllAudio();
 
   const incoming = createAudio(filename);
-  incoming.volume = 0;
   incoming.play().catch(() => {});
 
   const fadeSteps = 40;
   const fadeMs    = 2000 / fadeSteps;
   let   step      = 0;
 
-  fadeInterval = setInterval(() => {
-    step++;
-    incoming.volume = Math.min(musicVolume, musicVolume * (step / fadeSteps));
-    if (step >= fadeSteps) {
-      clearInterval(fadeInterval);
-      fadeInterval = null;
-      currentAudio = incoming;
-      if (onComplete) onComplete();
-    }
-  }, fadeMs);
-
   currentAudio = incoming;
-}
-
-  const incoming = createAudio(filename);
-  incoming.volume = 0;
-  incoming.play().catch(() => {});
-
-  const outgoing  = currentAudio;
-  const fadeSteps = 40;
-  const fadeMs    = 2000 / fadeSteps;
-  let   step      = 0;
 
   fadeInterval = setInterval(() => {
     step++;
-    const progress = step / fadeSteps;
-    if (incoming) incoming.volume = Math.min(musicVolume, musicVolume * progress);
-    if (outgoing) outgoing.volume = Math.max(0, musicVolume * (1 - progress));
-
+    if (incoming) incoming.volume = Math.min(musicVolume, musicVolume * (step / fadeSteps));
     if (step >= fadeSteps) {
       clearInterval(fadeInterval);
       fadeInterval = null;
-      if (outgoing) { outgoing.pause(); outgoing.src = ''; }
-      currentAudio = incoming;
-      if (onComplete) onComplete();
     }
   }, fadeMs);
-
-  currentAudio = incoming;
 }
 
-// ── Fade out current track ─────────────────
-function fadeOut(onComplete) {
-  if (!currentAudio) { if (onComplete) onComplete(); return; }
-  if (fadeInterval) clearInterval(fadeInterval);
+// ── Fade out ──────────────────────────────
+function fadeOut() {
+  if (!currentAudio) return;
+  if (fadeInterval) { clearInterval(fadeInterval); fadeInterval = null; }
 
   const outgoing  = currentAudio;
+  currentAudio    = null;
   const fadeSteps = 30;
   const fadeMs    = 1500 / fadeSteps;
   let   step      = 0;
 
   fadeInterval = setInterval(() => {
     step++;
-    outgoing.volume = Math.max(0, musicVolume * (1 - step / fadeSteps));
+    if (outgoing) outgoing.volume = Math.max(0, musicVolume * (1 - step / fadeSteps));
     if (step >= fadeSteps) {
       clearInterval(fadeInterval);
       fadeInterval = null;
-      outgoing.pause(); outgoing.src = '';
-      currentAudio = null;
-      if (onComplete) onComplete();
+      try { outgoing.pause(); outgoing.src = ''; } catch(e) {}
     }
   }, fadeMs);
 }
 
-// ── Main music state switcher ──────────────
+// ── Main state switcher ────────────────────
 window.setMusicState = function (state) {
-  if (!musicEnabled)                  return;
-  if (state === currentMusicState)    return;
+  if (!musicEnabled)             return;
+  if (state === currentMusicState) return;
   currentMusicState = state;
-
-  if (state === 'none') {
-    fadeOut(); return;
-  }
-
-  const track = pickTrack(state);
-  crossfadeTo(track);
+  if (state === 'none') { fadeOut(); return; }
+  crossfadeTo(pickTrack(state));
 };
 
 // ── Called every frame from combat loop ───
 window.updateMusicIntensity = function (enemyCount, hasBoss) {
   if (!musicEnabled) return;
-
-  if (hasBoss)            window.setMusicState('boss');
+  if (hasBoss)             window.setMusicState('boss');
   else if (enemyCount > 0) window.setMusicState('combat');
   else                     window.setMusicState('sanctuary');
-
   intensityTarget = hasBoss ? 1.0 : Math.min(1.0, 0.3 + enemyCount * 0.08);
   musicIntensity += (intensityTarget - musicIntensity) * 0.02;
 };
 
-// ── Play sanctuary music in hub ────────────
+// ── Hub music ─────────────────────────────
 window.playBGM = function () {
   if (!musicEnabled) return;
   window.setMusicState('sanctuary');
 };
 
 window.stopBGM = function () {
-  fadeOut();
+  killAllAudio();
   currentMusicState = 'none';
 };
 
-// ── Init SFX audio context ─────────────────
+// ── Init SFX context ──────────────────────
 function initAudio() {
   if (audioCtx) return;
-  audioCtx    = new (window.AudioContext || window.webkitAudioContext)();
-  masterGain  = audioCtx.createGain(); masterGain.gain.value = 0.8;
-  sfxGain     = audioCtx.createGain(); sfxGain.gain.value    = 0.7;
+  audioCtx   = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain(); masterGain.gain.value = 0.8;
+  sfxGain    = audioCtx.createGain(); sfxGain.gain.value    = 0.7;
   sfxGain.connect(masterGain);
   masterGain.connect(audioCtx.destination);
 }
 
-// ── Positional stereo panner ───────────────
+// ── Positional panner ─────────────────────
 function createPanner(sourceX) {
-  const panner      = audioCtx.createStereoPanner();
-  const playerX     = lhPlayer ? lhPlayer.x : 400;
-  panner.pan.value  = Math.max(-1, Math.min(1, (sourceX - playerX) / 400));
+  const panner     = audioCtx.createStereoPanner();
+  const playerX    = lhPlayer ? lhPlayer.x : 400;
+  panner.pan.value = Math.max(-1, Math.min(1, (sourceX - playerX) / 400));
   return panner;
 }
 
-// ── Sound Toggle ───────────────────────────
+// ── Sound Toggle ──────────────────────────
 window.toggleSound = function () {
-  soundEnabled  = !soundEnabled;
-  musicEnabled  = soundEnabled;
-  const btn     = document.getElementById('sound-toggle');
+  soundEnabled = !soundEnabled;
+  musicEnabled = soundEnabled;
+  const btn = document.getElementById('sound-toggle');
   btn.innerText         = soundEnabled ? '🔊 Sound: ON'  : '🔇 Sound: OFF';
   btn.style.color       = soundEnabled ? '#00ffcc' : '#ffcc00';
   btn.style.borderColor = soundEnabled ? '#00ffcc' : '#ffcc00';
-
   if (soundEnabled) {
     initAudio();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     playSound('coin');
-    // Resume whatever state we were in
     if (inSanctuary) window.setMusicState('sanctuary');
-    else if (currentMusicState !== 'none') window.setMusicState(currentMusicState);
   } else {
-    fadeOut();
+    killAllAudio();
     currentMusicState = 'none';
   }
 };
 
-// ── Weapon shoot sound helper ──────────────
+// ── Weapon sound helper ───────────────────
 window.playShootSound = function (wType, sourceX) {
   switch (wType) {
-    case 'SMG':      playSound('shoot_smg',      sourceX); break;
-    case 'Shotgun':  playSound('shoot_shotgun',   sourceX); break;
-    case 'Sniper':   playSound('shoot_sniper',    sourceX); break;
-    case 'Launcher': playSound('shoot_launcher',  sourceX); break;
-    default:         playSound('shoot_pistol',    sourceX); break;
+    case 'SMG':      playSound('shoot_smg',     sourceX); break;
+    case 'Shotgun':  playSound('shoot_shotgun',  sourceX); break;
+    case 'Sniper':   playSound('shoot_sniper',   sourceX); break;
+    case 'Launcher': playSound('shoot_launcher', sourceX); break;
+    default:         playSound('shoot_pistol',   sourceX); break;
   }
 };
 
-// ── Damage sound helper ────────────────────
+// ── Damage sound helper ───────────────────
 window.playDamageSound = function (hitShield, sourceX) {
   if (hitShield) playSound('shield_hit', sourceX);
   else           playSound('hit',        sourceX);
 };
 
-// ── Main SFX player ────────────────────────
+// ── Main SFX ──────────────────────────────
 window.playSound = function (type, sourceX) {
   if (!soundEnabled) return;
   if (!audioCtx) initAudio();
@@ -258,10 +199,8 @@ window.playSound = function (type, sourceX) {
 
   switch (type) {
     case 'shoot_pistol': case 'shoot':
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(320, now); osc.frequency.exponentialRampToValueAtTime(80, now+0.08);
-      gain.gain.setValueAtTime(0.18, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.1);
-      osc.start(now); osc.stop(now+0.12);
+      osc.type='sawtooth'; osc.frequency.setValueAtTime(320,now); osc.frequency.exponentialRampToValueAtTime(80,now+0.08);
+      gain.gain.setValueAtTime(0.18,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.1); osc.start(now); osc.stop(now+0.12);
       { const o2=audioCtx.createOscillator(),g2=audioCtx.createGain(); o2.type='square'; o2.frequency.value=1200; g2.gain.setValueAtTime(0.06,now); g2.gain.exponentialRampToValueAtTime(0.001,now+0.02); o2.connect(g2); g2.connect(sfxGain); o2.start(now); o2.stop(now+0.025); }
       break;
     case 'shoot_smg':
