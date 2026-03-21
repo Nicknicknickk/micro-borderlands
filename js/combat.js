@@ -136,7 +136,7 @@ function loopLooter() {
     ctx.fillStyle=lhPlayer.win?'#00ffcc':'#ff3333';ctx.font='50px Arial';ctx.textAlign='center';
     ctx.fillText(lhPlayer.win?'RETURNING TO SANCTUARY':'FIGHT FOR YOUR LIFE FAILED',400,200);
     if(lhPlayer.win){
-      if(lhPlayer.winTimer===undefined){lhPlayer.winTimer=50;runCount++;badassTokens+=2;if(isRaidBoss)badassTokens+=10;localStorage.setItem('borderRuns',runCount);localStorage.setItem('badassTokens',badassTokens);}
+      if(lhPlayer.winTimer===undefined){lhPlayer.winTimer=50;runCount++;badassTokens+=2;if(isRaidBoss){badassTokens+=10;unlockAchievement('raid_slayer');}localStorage.setItem('borderRuns',runCount);localStorage.setItem('badassTokens',badassTokens);}
       lhPlayer.winTimer--;if(lhPlayer.winTimer<=0){startSanctuary();return;}
     } else {ctx.font='25px Arial';ctx.fillText('Click to Play Again',400,260);gCanvas.onclick=()=>{gCanvas.onclick=null;startLooter();};}
     ctx.textAlign='left';animId=requestAnimationFrame(loopLooter);return;
@@ -369,7 +369,7 @@ function loopLooter() {
         const dist=Math.hypot(lhPlayer.x-e.x,lhPlayer.y-e.y);
         if(dist<120){if(inVehicle){lhPlayer.vehicleHp-=1000;checkVehicleExplosion();}else{let dmg=200*mayhemMult*(1-equippedArmor.dmgRed);lhPlayer.shieldRechargeDelay=240;if(lhPlayer.shield>0){if(lhPlayer.shield>=dmg){lhPlayer.shield-=dmg;dmg=0;}else{dmg-=lhPlayer.shield;lhPlayer.shield=0;}}lhPlayer.hp-=dmg;spawnParticles(lhPlayer.x,lhPlayer.y,'#ff0000',20,5,20);if(lhPlayer.hp<=0)lhPlayer.dead=true;}}
         if(activeQuest===2){questProgress++;localStorage.setItem('borderQProg',questProgress);}
-        gainExp(50*mayhemMult);lhKills++;playerCoins+=50;localStorage.setItem('borderCoins',playerCoins);
+        gainExp(50*mayhemMult);lhKills++;totalKills++;localStorage.setItem('totalKills',totalKills);playerCoins+=50;localStorage.setItem('borderCoins',playerCoins);checkAchievements();
         if(Math.random()<0.3)genLoot(e.x,e.y,false);lhEnemies.splice(i,1);
       }
       continue;
@@ -410,13 +410,13 @@ function loopLooter() {
         else if(e.type==='lilith_boss'){const mPref=mayhemMode>0?`M${mayhemMode} `:'';lhLoot.push({x:e.x,y:e.y,isMod:false,gun:{name:mPref+'UNIQUE Hellfire',c:'#00ffff',dmg:Math.floor(400*mayhemMult),fr:3,spd:15,timer:0},life:9999});lhLoot.push({x:e.x+40,y:e.y,isMod:true,type:'Armor',name:mPref+"Firehawk's Mantle",desc:`-15% DMG, +${250*mayhemMult} HP`,dmgRed:0.15,hpBonus:250*mayhemMult,c:'#00ffff',life:9999});}
         else if(e.type==='moxxi_boss'){const mPref=mayhemMode>0?`M${mayhemMode} `:'';lhLoot.push({x:e.x,y:e.y,isMod:false,gun:{name:mPref+'UNIQUE Heart Breaker',c:'#00ffff',dmg:Math.floor(600*mayhemMult),fr:15,spd:10,timer:0},life:9999});lhLoot.push({x:e.x+40,y:e.y,isMod:true,type:'Armor',name:mPref+"Moxxi's Corset",desc:`-10% DMG, +${400*mayhemMult} HP`,dmgRed:0.10,hpBonus:400*mayhemMult,c:'#00ffff',life:9999});}
         else genLoot(e.x,e.y,true);
-      } else if(e.type==='goliath'){playerCoins+=100;lhKills++;gainExp(200*mayhemMult);genLoot(e.x,e.y,false,false,false,e.pref==='Loot');}
+      } else if(e.type==='goliath'){playerCoins+=100;lhKills++;totalKills++;localStorage.setItem('totalKills',totalKills);gainExp(200*mayhemMult);checkAchievements();genLoot(e.x,e.y,false,false,false,e.pref==='Loot');}
       else if(newEnemyTypes.includes(e.type)){
-        lhKills++;playerCoins+=150;gainExp(100*mayhemMult);
+        lhKills++;totalKills++;localStorage.setItem('totalKills',totalKills);playerCoins+=150;gainExp(100*mayhemMult);checkAchievements();
         if(e.type==='badass_psycho'){genLoot(e.x,e.y,true);badassTokens+=1;localStorage.setItem('badassTokens',badassTokens);}
         else if(Math.random()<0.35)genLoot(e.x,e.y,false,false,false,true);
       }
-      else{lhKills++;playerCoins+=20;gainExp(50*mayhemMult);if(e.pref==='Loot'){genLoot(e.x,e.y,false);genLoot(e.x+10,e.y+10,false);genLoot(e.x-10,e.y-10,false);}else if(Math.random()<0.20)genLoot(e.x,e.y,false);if(activeQuest===1&&e.type==='normal'){questProgress++;localStorage.setItem('borderQProg',questProgress);}}
+      else{lhKills++;totalKills++;localStorage.setItem('totalKills',totalKills);playerCoins+=20;gainExp(50*mayhemMult);checkAchievements();if(e.pref==='Loot'){genLoot(e.x,e.y,false);genLoot(e.x+10,e.y+10,false);genLoot(e.x-10,e.y-10,false);}else if(Math.random()<0.20)genLoot(e.x,e.y,false);if(activeQuest===1&&e.type==='normal'){questProgress++;localStorage.setItem('borderQProg',questProgress);}}
       localStorage.setItem('borderCoins',playerCoins);lhEnemies.splice(i,1);continue;
     }
 
@@ -494,7 +494,7 @@ function loopLooter() {
           const kbAng=Math.atan2(e.y-lhPlayer.y,e.x-lhPlayer.x);
           e.x+=Math.cos(kbAng)*kbStr;e.y+=Math.sin(kbAng)*kbStr;
           e.x=Math.max(20,Math.min(WORLD_W-20,e.x));e.y=Math.max(20,Math.min(WORLD_H-20,e.y));
-          if(isCrit)playSound('hit_crit',e.x);else playSound('hit',e.x);
+          if(isCrit){totalCrits++;localStorage.setItem('totalCrits',totalCrits);playSound('hit_crit',e.x);}else playSound('hit',e.x);
           lhDmgText.push({x:e.x+(Math.random()*30-15),y:e.y-e.h/2,txt:isCrit?`CRIT! ${Math.floor(finalDmg)}`:Math.floor(finalDmg),life:isCrit?45:30,c:isCrit?'#ff0000':e.pref==='Armored'?'#ffaa00':finalDmg>50?'#ff0':'#fff'});
           spawnParticles(b.x,b.y,'#ffff00',6,3,15);
           if(fireLvl>0)e.fT=elemDur;if(shockLvl>0)e.sT=elemDur;if(acidLvl>0)e.aT=elemDur;
@@ -598,6 +598,7 @@ function loopLooter() {
 
   const hasBoss=lhBossSpawned&&lhEnemies.some(e=>e.type.includes('boss')||e.type==='crawmerax'||e.type==='pete'||e.type==='terramorphous');
   updateMusicIntensity(lhEnemies.length,hasBoss);
+  drawAchievementPopup();
 
   statusText.innerText='WASD: Move | Click: Shoot | E: Skill | G: Grenade | F: Pick Up | B: Vault | I: Inventory';
   animId=requestAnimationFrame(loopLooter);

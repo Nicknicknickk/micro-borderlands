@@ -11,6 +11,18 @@ window.launchGame = function () {
   else startLooter();
 };
 
+window.showAchievements = function () {
+  mainMenu.style.display      = 'none';
+  gameContainer.style.display = 'flex';
+  ctx.clearRect(0, 0, gCanvas.width, gCanvas.height);
+  drawAchievementScreen(ctx, gCanvas.width, gCanvas.height);
+  gCanvas.onclick = () => {
+    gCanvas.onclick = null;
+    gameContainer.style.display = 'none';
+    mainMenu.style.display      = 'flex';
+  };
+};
+
 window.goHome = function () {
   if (animId) cancelAnimationFrame(animId);
   window.closeBank(); window.closeBadass(); window.closeInventory(); window.closeSkills();
