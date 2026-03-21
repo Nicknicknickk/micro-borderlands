@@ -7,7 +7,7 @@ window.launchGame = function () {
   mainMenu.style.display      = 'none';
   gameContainer.style.display = 'flex';
   if (runCount > 0) startSanctuary();
-  else { playBGM(TRACK_LOOT); startLooter(); }
+  else { window.setMusicState('sanctuary'); startLooter(); }
 };
 
 window.goHome = function () {
@@ -25,7 +25,7 @@ window.enterBossMode = function () { isBossMode = true;  bossScreen.style.displa
 window.exitBossMode  = function () {
   isBossMode = false; bossScreen.style.display = 'none';
   if (soundEnabled && !inSanctuary && !inBank && !inBadass && !inInventory && !inSkills && !inDialog)
-    playBGM(TRACK_LOOT);
+    window.setMusicState('sanctuary');
 };
 
 window.exportSave = function () {
@@ -58,7 +58,7 @@ window.addEventListener('keydown', e => {
     if (inInventory) window.closeInventory(); else window.openInventory();
   }
   if (inDialog && dialogStep === moxxiLines.length - 1) {
-    if (e.key.toLowerCase() === 'y') { inDialog = false; playBGM(TRACK_LOOT); startLooter(false, null, true); }
+    if (e.key.toLowerCase() === 'y') { inDialog = false; window.setMusicState('sanctuary'); startLooter(false, null, true); }
     if (e.key.toLowerCase() === 'n') { inDialog = false; playSound('hit'); }
   }
 });

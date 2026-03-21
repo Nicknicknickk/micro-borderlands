@@ -17,7 +17,8 @@ function startSanctuary() {
   lhDmgText = []; lhGrenades = []; lhAllies = [];
   inDialog = false; dialogStep = 0;
 
-  stopBGM();
+  window.stopBGM();
+
 
   gCanvas.onmousemove = (e) => {
     const rect   = gCanvas.getBoundingClientRect();
@@ -153,8 +154,8 @@ function loopSanctuary() {
   // ── [C] key — Duels ──────────────────────
   if (!inDialog && (keys['KeyC'] || keys['c'])) {
     keys['KeyC'] = false; keys['c'] = false;
-    if (nearNPC && nearNPC.name === 'Lilith') { playBGM(TRACK_LOOT); startLooter(false, 'Lilith'); return; }
-    if (nearNPC && nearNPC.name === 'Moxxi')  { playBGM(TRACK_LOOT); startLooter(false, 'Moxxi');  return; }
+    if (nearNPC && nearNPC.name === 'Lilith') { window.setMusicState('sanctuary'); startLooter(false, 'Lilith'); return; }
+    if (nearNPC && nearNPC.name === 'Moxxi')  { window.setMusicState('sanctuary'); startLooter(false, 'Moxxi');  return; }
   }
 
   // ── [E] key — NPC interactions ───────────
@@ -163,11 +164,11 @@ function loopSanctuary() {
     if (nearNPC) {
       const n = nearNPC;
       if (n.name === 'Portal') {
-        playBGM(TRACK_LOOT); startLooter(false); return;
+        window.setMusicState('sanctuary'); startLooter(false); return;
       } else if (n.name === 'Raid Portal') {
         if (playerCoins >= 2000) {
           playerCoins -= 2000; localStorage.setItem('borderCoins', playerCoins);
-          playBGM(TRACK_LOOT); startLooter(true); return;
+          window.setMusicState('sanctuary'); startLooter(true); return;
         } else { playSound('hit'); lhDmgText.push({ x: n.x, y: n.y-40, txt: 'NEED 2000c!', life: 40, c: '#f00' }); }
       } else if (n.name === 'Bounty Board') {
         if (activeQuest === 0) {

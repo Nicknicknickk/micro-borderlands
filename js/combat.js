@@ -85,7 +85,7 @@ function startLooter(raid = false, duelTarget = null, underdome = false) {
   };
   gCanvas.onmousedown = () => {
     lhShooting = true;
-    if (soundEnabled && isYtReady && ytPlayer.getPlayerState()!==1) ytPlayer.playVideo();
+    window.setMusicState('combat');
   };
   gCanvas.onmouseup = () => lhShooting = false;
   loopLooter();
