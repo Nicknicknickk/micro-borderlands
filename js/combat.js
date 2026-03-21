@@ -79,6 +79,7 @@ function startLooter(raid=false,duelTarget=null,underdome=false) {
   inSanctuary=false;inVehicle=false;dayNightTimer=0;
   lhParticles=[];screenShake=0;lhCraters=[];
   hitStopFrames=0;cameraRecoilX=0;cameraRecoilY=0;muzzleFlashes=[];shellCasings=[];
+  initZones();
   initMapSpecials(activeMapIndex);
   isRaidBoss=raid;isDuel=duelTarget!==null;duelOpponent=duelTarget;
   lhExitPortal=null;lhAllies=[];
@@ -122,8 +123,8 @@ function loopLooter() {
   dayNightTimer++;
 
   const mayhemMult=mayhemMode===50?2500:mayhemMode===20?500:mayhemMode===10?25:1;
+  if(!lhPlayer) return;
   const elemDur=(equippedCMod==='Witch'&&lhPlayer.char==='maya')?600:300;
-  if (!lhPlayer) return;
   const elemMult=mayhemMult*((equippedCMod==='Witch'&&lhPlayer.char==='maya')?2:1)*(1+lhPlayer.mods.elem);
 
   // ── Camera recoil recovery ────────────────
@@ -137,7 +138,7 @@ function loopLooter() {
     ctx.fillStyle=lhPlayer.win?'#00ffcc':'#ff3333';ctx.font='50px Arial';ctx.textAlign='center';
     ctx.fillText(lhPlayer.win?'RETURNING TO SANCTUARY':'FIGHT FOR YOUR LIFE FAILED',400,200);
     if(lhPlayer.win){
-      if(lhPlayer.winTimer===undefined){lhPlayer.winTimer=50;runCount++;badassTokens+=2;if(isRaidBoss){badassTokens+=10;unlockAchievement('raid_slayer');}localStorage.setItem('borderRuns',runCount);localStorage.setItem('badassTokens',badassTokens);}
+      if(lhPlayer.winTimer===undefined){lhPlayer.winTimer=50;runCount++;badassTokens+=2;if(isRaidBoss){badassTokens+=10;unlockAchievement('raid_slayer');}localStorage.setItem('borderRuns',runCount);localStorage.setItem('badassTokens',badassTokens);onRunComplete();}
       lhPlayer.winTimer--;if(lhPlayer.winTimer<=0){startSanctuary();return;}
     } else {ctx.font='25px Arial';ctx.fillText('Click to Play Again',400,260);gCanvas.onclick=()=>{gCanvas.onclick=null;startLooter();};}
     ctx.textAlign='left';animId=requestAnimationFrame(loopLooter);return;
@@ -277,17 +278,15 @@ function loopLooter() {
       for(let k=0;k<4;k++)genLoot(lhPlayer.x+(Math.random()*100-50),lhPlayer.y+(Math.random()*100-50),false,false,false,true);
     }
   } else {
-    if(!isRaidBoss&&!isDuel&&!lhBossSpawned&&lhKills>=20){
-      lhBossSpawned=true;
-      const bossX=Math.max(80,Math.min(WORLD_W-80,lhPlayer.x+400)),bossY=Math.max(80,Math.min(WORLD_H-80,lhPlayer.y));
-      if(runCount>=6)lhEnemies.push({x:bossX,y:bossY,hp:10000*mayhemMult,maxHp:10000*mayhemMult,speed:2.5,type:'boss_goliath',pref:'',w:150,h:150,fT:0,sT:0,aT:0,cd:60});
-      else           lhEnemies.push({x:bossX,y:bossY,hp:1200*mayhemMult,maxHp:1200*mayhemMult,speed:2,type:'boss',pref:'',w:80,h:80,fT:0,sT:0,aT:0,cd:60});
-      playSound('die',bossX);spawnParticles(bossX,bossY,'#800080',60,6,50);
-    }
-    // Standard enemy spawn
-    if(!isRaidBoss&&!isDuel&&!lhBossSpawned&&Math.random()<0.05){
-      const ex=Math.random()*WORLD_W,ey=Math.random()*WORLD_H;
-      if(Math.hypot(lhPlayer.x-ex,lhPlayer.y-ey)>400)spawnEnemy(ex,ey,psychoBaseHp,psychoVarHp,mayhemMult);
+    // Boss spawning handled by zone system
+    // Zone-aware enemy spawn
+    if(!isRaidBoss&&!isDuel&&Math.random()<0.05){
+      // Only spawn in current zone
+      const zoneMaxX = currentZone===1 ? ZONE1_END()-50 : currentZone===2 ? ZONE2_END()-50 : WORLD_W-50;
+      const zoneMinX = currentZone===1 ? 50 : currentZone===2 ? ZONE1_END()+50 : ZONE2_END()+50;
+      const ex = zoneMinX + Math.random()*(zoneMaxX-zoneMinX);
+      const ey = 50 + Math.random()*(WORLD_H-100);
+      if(Math.hypot(lhPlayer.x-ex,lhPlayer.y-ey)>300) spawnEnemy(ex,ey,psychoBaseHp,psychoVarHp,mayhemMult);
     }
     // New enemy types spawn (level 10+)
     if(!isRaidBoss&&!isDuel&&!lhBossSpawned&&Math.random()<0.02&&pLevel>=10){
@@ -317,6 +316,9 @@ function loopLooter() {
   for(let i=0;i<WORLD_H;i+=100){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(WORLD_W,i);ctx.stroke();}
   ctx.strokeStyle=mayhemMode===50?'#ff00ff':mayhemMode===20?'#800080':mayhemMode===10?'#ff0000':'#ff007f';
   ctx.lineWidth=10;ctx.strokeRect(0,0,WORLD_W,WORLD_H);
+
+  // ── Zone walls & gate ────────────────────
+  drawZones(ctx);
 
   // ── Map special layer ─────────────────────
   drawMapSpecialLayer(ctx,lhCam);
@@ -560,7 +562,6 @@ function loopLooter() {
     if(lhPlayer.skillTimer>0&&lhPlayer.char==='krieg'){ctx.fillStyle='rgba(255,165,0,0.2)';ctx.beginPath();ctx.arc(lhPlayer.x,lhPlayer.y,100,0,Math.PI*2);ctx.fill();}
   }
 
-  ctx.restore();
 
   // ── HUD ───────────────────────────────────
   ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,800,60);
@@ -599,7 +600,9 @@ function loopLooter() {
 
   const hasBoss=lhBossSpawned&&lhEnemies.some(e=>e.type.includes('boss')||e.type==='crawmerax'||e.type==='pete'||e.type==='terramorphous');
   updateMusicIntensity(lhEnemies.length,hasBoss);
+  if(!isRaidBoss&&!isDuel) updateZones(mayhemMult);
   drawAchievementPopup();
+  drawMinimap();
 
   statusText.innerText='WASD: Move | Click: Shoot | E: Skill | G: Grenade | F: Pick Up | B: Vault | I: Inventory';
   animId=requestAnimationFrame(loopLooter);
