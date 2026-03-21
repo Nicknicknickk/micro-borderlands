@@ -1,1 +1,110 @@
 <html><body><h1>Coming Soon</h1></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Micro Borderlands</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://www.youtube.com/iframe_api"></script>
+</head>
+<body>
+
+  <!-- YouTube hidden audio player -->
+  <div id="yt-container"><div id="yt-player"></div></div>
+
+  <!-- BOSS MODE FAKE SCREEN -->
+  <div id="boss-screen">
+    <h2>System Diagnostic Tool - Workspace v4.2.1</h2>
+    <button onclick="window.exitBossMode()" style="width:auto; color:blue; border-color:blue; box-shadow:none;">Re-sync Service</button>
+    <table class="fake-table">
+      <tr><th>Process ID</th><th>Task</th><th>Status</th></tr>
+      <tr><td>8821-X</td><td>Global_Cache_Sync</td><td>Active</td></tr>
+    </table>
+  </div>
+
+  <!-- BANK / VAULT SCREEN -->
+  <div id="bank-screen" class="overlay-screen">
+    <h2 style="color:#ffa500; font-size:2.5rem; margin-bottom:5px;">SANCTUARY VAULT</h2>
+    <div style="background:#333; padding:10px; border:2px solid #fff; width:600px; max-width:90vw; margin-bottom:10px; text-align:center;">
+      <p id="bank-equipped" style="font-size:1.1rem; font-weight:bold; margin:5px;"></p>
+      <button onclick="window.depositGun()" style="width:auto; font-size:1rem; padding:8px;">Deposit</button>
+    </div>
+    <div id="bank-list" style="display:flex; flex-direction:column; gap:4px; max-height:400px; overflow-y:auto; width:620px; max-width:95vw; padding-right:10px;"></div>
+    <button onclick="window.closeBank()" style="width:auto; font-size:1.2rem; padding:10px 30px; border-color:#ff3333; color:#ff3333; margin-top:20px;">EXIT VAULT</button>
+  </div>
+
+  <!-- BADASS RANKS SCREEN -->
+  <div id="badass-screen" class="overlay-screen">
+    <h2 style="color:#ff007f; font-size:2.5rem; margin-bottom:5px;">BADASS RANKS</h2>
+    <p style="font-size:1.2rem;">Tokens: <span id="badass-tokens-display" style="color:#00ffcc; font-weight:bold;">0</span></p>
+    <div id="badass-list" style="display:flex; flex-direction:column; gap:8px; width:500px; max-width:90vw; margin-top:10px;"></div>
+    <button onclick="window.closeBadass()" style="width:auto; font-size:1.2rem; padding:10px 30px; border-color:#ff3333; color:#ff3333; margin-top:20px;">EXIT TERMINAL</button>
+  </div>
+
+  <!-- SKILL TREE SCREEN -->
+  <div id="skills-screen" class="overlay-screen">
+    <h2 style="color:#0f0; font-size:2.5rem; margin-bottom:5px;">SKILL TREE</h2>
+    <p style="font-size:1.2rem;">Available Points: <span id="skills-avail" style="color:#00ffcc; font-weight:bold;">0</span></p>
+    <div id="skills-list" style="display:flex; flex-direction:column; gap:8px; width:500px; max-width:90vw; margin-top:10px;"></div>
+    <button onclick="window.closeSkills()" style="width:auto; font-size:1.2rem; padding:10px 30px; border-color:#ff3333; color:#ff3333; margin-top:20px;">EXIT TERMINAL</button>
+  </div>
+
+  <!-- INVENTORY SCREEN -->
+  <div id="inv-screen" class="overlay-screen">
+    <h2 style="color:#00ffcc; font-size:2.5rem; margin-bottom:5px;">ECHO BACKPACK</h2>
+    <div style="background:#333; padding:10px; border:2px solid #fff; width:800px; max-width:90vw; margin-bottom:10px; text-align:center;">
+      <p style="margin:2px;">
+        <strong>Gun:</strong> <span id="inv-gun" style="color:#fff;"></span> |
+        <strong>Class:</strong> <span id="inv-class" style="color:#0ff;"></span> |
+        <strong>Nade:</strong> <span id="inv-grenade" style="color:#0f0;"></span> |
+        <strong>Armor:</strong> <span id="inv-armor" style="color:#00ffff;"></span>
+      </p>
+    </div>
+    <div style="display:flex; gap:10px; width:90vw; max-width:900px; justify-content:center;">
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
+        <h3 style="color:#0ff; margin-top:0;">MODS & ARMOR</h3>
+        <div id="inv-list" style="display:flex; flex-direction:column; gap:4px; max-height:350px; overflow-y:auto; width:100%; padding-right:5px;"></div>
+      </div>
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
+        <h3 style="color:#ffaa00; margin-top:0;">WEAPONS (<span id="inv-gun-count">0</span>/100)</h3>
+        <div id="inv-guns-list" style="display:flex; flex-direction:column; gap:4px; max-height:350px; overflow-y:auto; width:100%; padding-right:5px;"></div>
+      </div>
+    </div>
+    <button onclick="window.closeInventory()" style="width:auto; font-size:1.2rem; padding:10px 30px; border-color:#ff3333; color:#ff3333; margin-top:15px;">CLOSE ECHO</button>
+  </div>
+
+  <!-- MAIN MENU -->
+  <div id="main-menu">
+    <h1>MICRO<br>BORDERLANDS</h1>
+    <div class="subtitle">Standalone Wasteland v8.0</div>
+    <button onclick="window.launchGame()">RESUME GAME</button>
+    <div style="display:flex; gap:10px; width:100%; margin-top:10px;">
+      <button onclick="window.exportSave()" style="font-size:1rem; padding:10px;">Export Save</button>
+      <button onclick="window.importSave()" style="font-size:1rem; padding:10px;">Import Save</button>
+    </div>
+    <div id="stats-display" style="margin-top:20px; text-align:center;"></div>
+  </div>
+
+  <!-- GAME CONTAINER -->
+  <div id="game-container">
+    <div style="display:flex; justify-content:space-between; width:100%; margin-bottom:5px;">
+      <button onclick="window.goHome()" style="width:auto; padding:5px 15px; box-shadow:none;">← Menu</button>
+      <button id="sound-toggle" onclick="window.toggleSound()" style="width:auto; padding:5px 15px; color:#ffcc00; border-color:#ffcc00; box-shadow:none;">🔇 Sound: OFF</button>
+    </div>
+    <canvas id="game-canvas" width="800" height="450"></canvas>
+    <div id="status-text"></div>
+  </div>
+
+  <!-- LOAD SCRIPTS IN ORDER -->
+  <script src="js/state.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/loot.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/combat.js"></script>
+  <script src="js/sanctuary.js"></script>
+  <script src="js/main.js"></script>
+
+</body>
+</html>
