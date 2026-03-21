@@ -25,7 +25,7 @@ const clapLines = [
   "Welcome to Pandora, vault hunter!\nIt's a beautiful place full of\npsychos, explosions and LOOT!",
   "Before we go to Sanctuary I need to\nmake sure you're not completely useless.\nPress WASD or Arrow Keys to MOVE!",
   "AMAZING! You can walk! You're basically\nalready a legend. Now — see that target?\nSHOOT IT! Click to fire your gun!",
-  "WOOHOO! You're a NATURAL born killer!\nHere — take this pistol. Don't shoot me.\nNow let's get to Sanctuary! FOLLOW ME!"
+  "WOOHOO! You're a NATURAL born killer!\nNow let's get to Sanctuary!\nCLICK ANYWHERE to follow me!"
 ];
 
 // ── Init blizzard particles ────────────────
@@ -50,20 +50,19 @@ function shouldRunTutorial() {
 
 // ── Start tutorial ────────────────────────
 function startTutorial() {
-  inTutorial     = true;
-  tutorialStep   = 0;
-  tutorialTimer  = 0;
+  inTutorial        = true;
+  tutorialStep      = 0;
+  tutorialTimer     = 0;
   tutorialTargetHit = false;
-  tutorialTarget = null;
-  clapX          = -150;
-  clapY          = 300;
-  clapSliding    = true;
-  clapBobTimer   = 0;
+  tutorialTarget    = null;
+  clapX             = -150;
+  clapY             = 300;
+  clapSliding       = true;
+  clapBobTimer      = 0;
   initBlizzard();
   window.setMusicState('sanctuary');
   gCanvas.style.cursor = 'crosshair';
 
-  // Set up a minimal player for the tutorial
   const charClass = localStorage.getItem('borderClass') || 'zero';
   lhPlayer = {
     x: 500, y: 280,
@@ -83,37 +82,36 @@ function startTutorial() {
   lhBullets = []; lhEnemyBullets = []; lhParticles = []; lhDmgText = [];
   lhCam = { x: 0, y: 0 };
 
-  // Mouse tracking
   gCanvas.onmousemove = (e) => {
     const rect = gCanvas.getBoundingClientRect();
     lhMouse.screenX = (e.clientX - rect.left) * (gCanvas.width / rect.width);
     lhMouse.screenY = (e.clientY - rect.top)  * (gCanvas.height / rect.height);
   };
+
   gCanvas.onmousedown = () => {
+    // Step 5 = last line → complete tutorial on click
     if (tutorialStep === 5) {
       completeTutorial();
+    // Step 4 = shooting phase → shoot
     } else if (tutorialStep === 4 && !tutorialTargetHit) {
       shootTutorial();
-    } else if (tutorialStep !== 3 && tutorialStep !== 4) {
+    // Step 3 = movement phase → do nothing, wait for movement
+    } else if (tutorialStep === 3) {
+      return;
+    // All other steps → advance dialogue
+    } else {
       advanceTutorial();
     }
   };
-  gCanvas.onmouseup = null;
 
+  gCanvas.onmouseup = null;
   loopTutorial();
 }
 
 // ── Advance dialogue ───────────────────────
 function advanceTutorial() {
-  if (tutorialStep === 3) return; // wait for movement
-  if (tutorialStep === 4) return; // wait for shooting
-  if (tutorialStep >= clapLines.length - 1) {
-    completeTutorial(); return;
-  }
   playSound('coin');
   tutorialStep++;
-
-  // Spawn target on step 4
   if (tutorialStep === 4) {
     tutorialTarget = { x: 650, y: 230, hp: 3, maxHp: 3, flash: 0 };
   }
@@ -125,7 +123,6 @@ function shootTutorial() {
   if (lhPlayer.gun.timer > 0) return;
   lhPlayer.gun.timer = 12;
   playShootSound('Pistol', lhPlayer.x);
-
   const ang = Math.atan2(lhMouse.screenY - lhPlayer.y, lhMouse.screenX - lhPlayer.x);
   lhBullets.push({
     x: lhPlayer.x, y: lhPlayer.y,
@@ -138,25 +135,15 @@ function shootTutorial() {
 
 // ── Complete tutorial ─────────────────────
 function completeTutorial() {
-  if (tutorialDone === 1) return; // prevent double trigger
+  if (tutorialDone === 1) return;
   tutorialDone = 1;
   localStorage.setItem('tutorialDone', 1);
   inTutorial = false;
   playSound('levelup');
-  spawnParticles(400, 225, '#ffcc00', 80, 8, 60);
-
-  // Drop starter pistol as loot
-  lhLoot.push({
-    x: 400, y: 300,
-    isMod: false,
-    gun: { name: 'Starter Pistol+', c: '#00ff00', dmg: 35, fr: 10, spd: 10, rarity: 1, wType: 'Pistol', timer: 0 },
-    life: 9999
-  });
-
+  spawnParticles(400, 225, '#ffcc00', 100, 8, 80);
   gCanvas.onmousedown = null;
-  setTimeout(() => {
-    startSanctuary();
-  }, 2000);
+  if (animId) cancelAnimationFrame(animId);
+  setTimeout(() => { startSanctuary(); }, 1500);
 }
 
 // ── Main tutorial loop ────────────────────
@@ -170,11 +157,9 @@ function loopTutorial() {
   ctx.fillStyle = '#0a1520';
   ctx.fillRect(0, 0, 800, 450);
 
-  // Ground snow
   ctx.fillStyle = '#c8dce8';
   ctx.fillRect(0, 380, 800, 70);
 
-  // Snow drifts
   ctx.fillStyle = '#d8ecf8';
   for (let i = 0; i < 8; i++) {
     ctx.beginPath();
@@ -182,21 +167,18 @@ function loopTutorial() {
     ctx.fill();
   }
 
-  // Distant mountains
   ctx.fillStyle = '#1a2535';
   ctx.beginPath(); ctx.moveTo(0, 320); ctx.lineTo(120, 200); ctx.lineTo(240, 320); ctx.fill();
   ctx.beginPath(); ctx.moveTo(150, 320); ctx.lineTo(300, 160); ctx.lineTo(450, 320); ctx.fill();
   ctx.beginPath(); ctx.moveTo(400, 320); ctx.lineTo(550, 180); ctx.lineTo(700, 320); ctx.fill();
   ctx.beginPath(); ctx.moveTo(600, 320); ctx.lineTo(720, 210); ctx.lineTo(800, 320); ctx.fill();
 
-  // Snow caps
   ctx.fillStyle = '#c8dce8';
   ctx.beginPath(); ctx.moveTo(100, 215); ctx.lineTo(120, 200); ctx.lineTo(140, 215); ctx.fill();
   ctx.beginPath(); ctx.moveTo(270, 175); ctx.lineTo(300, 160); ctx.lineTo(330, 175); ctx.fill();
   ctx.beginPath(); ctx.moveTo(520, 195); ctx.lineTo(550, 180); ctx.lineTo(580, 195); ctx.fill();
   ctx.beginPath(); ctx.moveTo(695, 225); ctx.lineTo(720, 210); ctx.lineTo(745, 225); ctx.fill();
 
-  // Blizzard particles
   blizzardParticles.forEach(p => {
     p.x += p.vx; p.y += p.vy;
     if (p.x < -5) p.x = 805;
@@ -207,7 +189,6 @@ function loopTutorial() {
   });
   ctx.globalAlpha = 1.0;
 
-  // Wind blur overlay
   ctx.fillStyle = 'rgba(150, 200, 255, 0.04)';
   ctx.fillRect(0, 0, 800, 450);
 
@@ -217,12 +198,10 @@ function loopTutorial() {
     if (Math.abs(clapX - clapTargetX) < 2) { clapX = clapTargetX; clapSliding = false; playSound('ability'); }
   }
 
-  // Claptrap body — draw pixel art style
   const bobY = clapY + Math.sin(clapBobTimer * 0.05) * 4;
   ctx.save();
   ctx.translate(clapX, bobY);
 
-  // Wheel
   ctx.fillStyle = '#333';
   ctx.beginPath(); ctx.arc(0, 35, 18, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#555';
@@ -233,37 +212,32 @@ function loopTutorial() {
     ctx.fillRect(Math.cos(sa) * 8 - 3, 35 + Math.sin(sa) * 8 - 3, 6, 6);
   }
 
-  // Body
   ctx.fillStyle = '#ffcc00';
   ctx.fillRect(-25, -20, 50, 55);
   ctx.fillStyle = '#ff8800';
   ctx.fillRect(-20, -15, 40, 10);
 
-  // Screen/eye
   ctx.fillStyle = '#00ccff';
   ctx.fillRect(-18, -8, 36, 25);
   ctx.fillStyle = '#0066ff';
   ctx.fillRect(-8, -3, 16, 15);
-  // Pupil that follows mouse direction
+
   const eyeAng = Math.atan2(lhMouse.screenY - (bobY - 5), lhMouse.screenX - clapX);
   ctx.fillStyle = '#ffffff';
   ctx.beginPath(); ctx.arc(Math.cos(eyeAng) * 4, -3 + Math.sin(eyeAng) * 4, 5, 0, Math.PI * 2); ctx.fill();
 
-  // Antenna
   ctx.strokeStyle = '#888'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(0, -45); ctx.stroke();
   ctx.fillStyle = '#ff0000';
   ctx.beginPath(); ctx.arc(0, -45, 5, 0, Math.PI * 2); ctx.fill();
 
-  // Arms
   ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 6;
   const armSwing = Math.sin(clapBobTimer * 0.08) * 15;
   ctx.beginPath(); ctx.moveTo(-25, 5); ctx.lineTo(-45, 15 + armSwing); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(25, 5); ctx.lineTo(45, 15 - armSwing); ctx.stroke();
   ctx.restore();
 
-  // ── Player ───────────────────────────────
-  // Movement in tutorial (steps 3+)
+  // ── Player movement (steps 3+) ────────────
   if (tutorialStep >= 3) {
     const spd = 4;
     if (keys['KeyW'] || keys['ArrowUp'])    lhPlayer.y = Math.max(200, lhPlayer.y - spd);
@@ -271,37 +245,36 @@ function loopTutorial() {
     if (keys['KeyA'] || keys['ArrowLeft'])  lhPlayer.x = Math.max(250, lhPlayer.x - spd);
     if (keys['KeyD'] || keys['ArrowRight']) lhPlayer.x = Math.min(780, lhPlayer.x + spd);
 
-    // Check movement happened → auto advance
     if (tutorialStep === 3) {
       const moved = Math.abs(lhPlayer.x - 500) > 30 || Math.abs(lhPlayer.y - 280) > 20;
-      if (moved) { playSound('coin'); tutorialStep = 4; tutorialTarget = { x: 650, y: 230, hp: 3, maxHp: 3, flash: 0 }; }
+      if (moved) {
+        playSound('coin');
+        tutorialStep = 4;
+        tutorialTarget = { x: 650, y: 230, hp: 3, maxHp: 3, flash: 0 };
+      }
     }
     drawPixelSprite(ctx, lhPlayer.char, lhPlayer.x, lhPlayer.y, 30);
   }
 
   // ── Tutorial target ───────────────────────
   if (tutorialTarget && !tutorialTargetHit) {
-    // Target post
     ctx.fillStyle = '#8b4513';
     ctx.fillRect(tutorialTarget.x - 3, tutorialTarget.y, 6, 50);
 
-    // Target board
     ctx.fillStyle = tutorialTarget.flash > 0 ? '#fff' : '#cc0000';
     ctx.fillRect(tutorialTarget.x - 25, tutorialTarget.y - 40, 50, 40);
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
     ctx.strokeRect(tutorialTarget.x - 25, tutorialTarget.y - 40, 50, 40);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
     ctx.fillText('SHOOT', tutorialTarget.x, tutorialTarget.y - 18);
-    ctx.fillText('ME!', tutorialTarget.x, tutorialTarget.y - 3);
+    ctx.fillText('ME!',   tutorialTarget.x, tutorialTarget.y - 3);
     ctx.textAlign = 'left';
 
-    // HP bar
     ctx.fillStyle = '#333'; ctx.fillRect(tutorialTarget.x - 25, tutorialTarget.y - 50, 50, 7);
     ctx.fillStyle = '#f00'; ctx.fillRect(tutorialTarget.x - 25, tutorialTarget.y - 50, (tutorialTarget.hp / tutorialTarget.maxHp) * 50, 7);
 
     if (tutorialTarget.flash > 0) tutorialTarget.flash--;
 
-    // Update bullets
     if (lhPlayer.gun.timer > 0) lhPlayer.gun.timer--;
     for (let i = lhBullets.length - 1; i >= 0; i--) {
       const b = lhBullets[i]; b.x += b.vx; b.y += b.vy;
@@ -318,7 +291,6 @@ function loopTutorial() {
           playSound('die', tutorialTarget.x);
           spawnParticles(tutorialTarget.x, tutorialTarget.y, '#ffcc00', 40, 6, 40);
           lhDmgText.push({ x: tutorialTarget.x, y: tutorialTarget.y - 60, txt: 'TARGET DOWN!', life: 80, c: '#ffcc00' });
-          // Auto advance after 1 second
           setTimeout(() => { tutorialStep = 5; playSound('coin'); }, 1000);
         }
       }
@@ -345,13 +317,11 @@ function loopTutorial() {
 
   // ── Dialogue box ─────────────────────────
   if (tutorialStep < clapLines.length) {
-    // Dark overlay at bottom
     ctx.fillStyle = 'rgba(0,0,0,0.85)';
     ctx.fillRect(0, 350, 800, 100);
     ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 3;
     ctx.strokeRect(0, 350, 800, 100);
 
-    // Claptrap mini portrait
     ctx.fillStyle = '#ffcc00';
     ctx.fillRect(10, 360, 60, 80);
     ctx.fillStyle = '#00ccff';
@@ -360,29 +330,21 @@ function loopTutorial() {
     ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
     ctx.fillText('CL4P-TP', 40, 455);
 
-    // Name tag
     ctx.fillStyle = '#ffcc00';
     ctx.font = 'bold 16px Courier New';
     ctx.textAlign = 'left';
     ctx.fillText('CLAPTRAP', 85, 372);
 
-    // Dialogue text
     ctx.fillStyle = '#ffffff';
     ctx.font = '14px Courier New';
     const lines = clapLines[tutorialStep].split('\n');
     lines.forEach((line, i) => ctx.fillText(line, 85, 392 + i * 20));
 
-    // Step indicator
     ctx.fillStyle = '#888';
     ctx.font = '12px Arial'; ctx.textAlign = 'right';
     ctx.fillText(`${tutorialStep + 1}/${clapLines.length}`, 790, 442);
 
-    // Prompt
-    if (tutorialStep !== 3 && tutorialStep !== 4) {
-      ctx.fillStyle = Math.floor(tutorialTimer / 20) % 2 === 0 ? '#ffcc00' : '#888';
-      ctx.font = '12px Courier'; ctx.textAlign = 'right';
-      ctx.fillText('[ CLICK TO CONTINUE ]', 790, 458);
-    } else if (tutorialStep === 3) {
+    if (tutorialStep === 3) {
       ctx.fillStyle = '#00ffcc';
       ctx.font = 'bold 13px Courier'; ctx.textAlign = 'right';
       ctx.fillText('[ MOVE WITH WASD / ARROW KEYS ]', 790, 458);
@@ -390,13 +352,17 @@ function loopTutorial() {
       ctx.fillStyle = '#ff4500';
       ctx.font = 'bold 13px Courier'; ctx.textAlign = 'right';
       ctx.fillText('[ CLICK TO SHOOT ]', 790, 458);
+    } else {
+      ctx.fillStyle = Math.floor(tutorialTimer / 20) % 2 === 0 ? '#ffcc00' : '#888';
+      ctx.font = '12px Courier'; ctx.textAlign = 'right';
+      ctx.fillText('[ CLICK TO CONTINUE ]', 790, 458);
     }
     ctx.textAlign = 'left';
   }
 
-  // ── Step 5 — completion flash ─────────────
+  // Golden flash on step 5
   if (tutorialStep === 5) {
-    ctx.fillStyle = 'rgba(255,204,0,0.1)';
+    ctx.fillStyle = `rgba(255,204,0,${0.05 + Math.sin(tutorialTimer * 0.1) * 0.05})`;
     ctx.fillRect(0, 0, 800, 450);
   }
 
