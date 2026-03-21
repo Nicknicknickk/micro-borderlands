@@ -123,6 +123,7 @@ function loopLooter() {
 
   const mayhemMult=mayhemMode===50?2500:mayhemMode===20?500:mayhemMode===10?25:1;
   const elemDur=(equippedCMod==='Witch'&&lhPlayer.char==='maya')?600:300;
+  if (!lhPlayer) return;
   const elemMult=mayhemMult*((equippedCMod==='Witch'&&lhPlayer.char==='maya')?2:1)*(1+lhPlayer.mods.elem);
 
   // ── Camera recoil recovery ────────────────
