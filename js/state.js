@@ -36,9 +36,13 @@ const WORLD_W = 2000;
 const WORLD_H = 1500;
 let lhCam     = { x: 0, y: 0 };
 let lhMouse   = { screenX: 400, screenY: 225 };
-let screenShake   = 0;
-let dayNightTimer = 0;
-const DAY_LENGTH  = 3600;
+let screenShake    = 0;
+let cameraRecoilX  = 0;
+let cameraRecoilY  = 0;
+let hitStopFrames  = 0;
+let shellCasings   = [];
+let dayNightTimer  = 0;
+const DAY_LENGTH   = 3600;
 
 // ── Timers ─────────────────────────────────
 let slotsSpinTimer   = 0;
