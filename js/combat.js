@@ -91,7 +91,7 @@ function startLooter(raid=false,duelTarget=null,underdome=false) {
   lhLoot=[];lhDmgText=[];lhShooting=false;lhKills=0;
   lhBossSpawned=false;lhGoliathsSpawned=0;
   initZones();
-
+  initMapSpecials(activeMapIndex);
   const mayhemMult=mayhemMode===50?2500:mayhemMode===20?500:mayhemMode===10?25:1;
 
   if(isRaidBoss){
@@ -599,6 +599,11 @@ function loopLooter() {
 
   const hasBoss=lhBossSpawned&&lhEnemies.some(e=>e.type.includes('boss')||e.type==='crawmerax'||e.type==='pete'||e.type==='terramorphous');
   updateMusicIntensity(lhEnemies.length,hasBoss);
+  updateZones(mayhemMult);
+  drawZones(ctx);
+  drawMinimap();
+  drawAchievementPopup();
+  checkAchievements();
   if(!isRaidBoss&&!isDuel) updateZones(mayhemMult);
   drawAchievementPopup();
   drawMinimap();
