@@ -150,7 +150,8 @@ function loopLooter() {
   }
 
   const baseSpd=inVehicle?12:5;
-  let spd=baseSpd+(rankSpeed*0.5)+(activeMapIndex===1?3:0);
+  const cappedRankSpeed = Math.min(rankSpeed, 10);
+  let spd=baseSpd+(cappedRankSpeed*0.3)+(activeMapIndex===1?3:0);
   if(lhPlayer.char==='krieg'&&lhPlayer.skillTimer>0)spd*=1.5;
   if(keys['KeyW']||keys['ArrowUp'])   lhPlayer.y=Math.max(15,lhPlayer.y-spd);
   if(keys['KeyS']||keys['ArrowDown']) lhPlayer.y=Math.min(WORLD_H-15,lhPlayer.y+spd);
@@ -220,13 +221,13 @@ function loopLooter() {
       let frMult=1-lhPlayer.mods.fr;
       if(equippedCMod==='Cat'&&lhPlayer.char==='maya')frMult*=0.7;
       if(equippedCMod==='Berserker'&&lhPlayer.char==='salvador')frMult*=0.7;
-      lhPlayer.gun.timer=Math.max(1,(lhPlayer.gun.fr*frMult)-rankFireRate);
+      lhPlayer.gun.timer=Math.max(1,(lhPlayer.gun.fr*frMult)-Math.min(rankFireRate,15));
       const skillDmgMult=(lhPlayer.char==='zero'&&lhPlayer.skillTimer>0)?4:1;
       if(lhPlayer.char==='zero'&&lhPlayer.skillTimer>0)lhPlayer.skillTimer=0;
       let cModDmg=1;
       if(equippedCMod==='Sniper'&&lhPlayer.char==='zero')cModDmg=1.3;
       if(equippedCMod==='Rifleman'&&lhPlayer.char==='axton')cModDmg=1.3;
-      const finalDmg=(lhPlayer.gun.dmg*skillDmgMult*cModDmg*(1+lhPlayer.mods.dmg))*(1+(rankDmg*0.15));
+      const finalDmg=(lhPlayer.gun.dmg*skillDmgMult*cModDmg*(1+lhPlayer.mods.dmg))*(1+(Math.min(rankDmg,20)*0.10));
       const isEtech=lhPlayer.gun.rarity===5,isPearl=lhPlayer.gun.rarity===6,isSnipe=gType==='Sniper';
       const fireBullet=(aOff,isRckt)=>{
         lhBullets.push({x:lhPlayer.x,y:lhPlayer.y,vx:Math.cos(ang+aOff)*lhPlayer.gun.spd,vy:Math.sin(ang+aOff)*lhPlayer.gun.spd,dmg:finalDmg,c:lhPlayer.gun.c,pierce:(isEtech||isSnipe),isRocket:isRckt,isSniper:isSnipe,hitList:[]});

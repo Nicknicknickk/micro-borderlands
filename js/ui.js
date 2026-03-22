@@ -129,8 +129,14 @@ window.closeBadass = function () {
   inBadass = false; keys['KeyE'] = false; keys['e'] = false;
   if (!isBossMode) { if (animId) cancelAnimationFrame(animId); if (inSanctuary) animId = requestAnimationFrame(loopSanctuary); else animId = requestAnimationFrame(loopLooter); }
 };
+// ── Badass Rank caps ───────────────────────
+const RANK_CAPS = { hp: 20, spd: 10, fr: 15, dmg: 20 };
+
 window.buyRank = function (type) {
   if (badassTokens <= 0) { playSound('hit'); return; }
+  const capKey = type;
+  const currentRank = type==='hp'?rankHP:type==='spd'?rankSpeed:type==='fr'?rankFireRate:rankDmg;
+  if (currentRank >= RANK_CAPS[capKey]) { playSound('hit'); return; }
   badassTokens--; playSound('coin');
   if (type === 'hp')  rankHP++;
   if (type === 'spd') rankSpeed++;
@@ -145,11 +151,25 @@ window.buyRank = function (type) {
 };
 function renderBadass() {
   document.getElementById('badass-tokens-display').innerText = badassTokens;
-  document.getElementById('badass-list').innerHTML = `
-    <div class="bank-item"><div><span style="color:#0f0; font-weight:bold;">Max Health</span><br><span style="font-size:0.9rem; color:#aaa;">Rank ${rankHP} (+${rankHP*25} HP)</span></div><button class="bank-btn" onclick="window.buyRank('hp')">UPGRADE</button></div>
-    <div class="bank-item"><div><span style="color:#0ff; font-weight:bold;">Movement Speed</span><br><span style="font-size:0.9rem; color:#aaa;">Rank ${rankSpeed} (+${rankSpeed*0.5} Spd)</span></div><button class="bank-btn" onclick="window.buyRank('spd')">UPGRADE</button></div>
-    <div class="bank-item"><div><span style="color:#ffcc00; font-weight:bold;">Fire Rate</span><br><span style="font-size:0.9rem; color:#aaa;">Rank ${rankFireRate} (-${rankFireRate} Delay)</span></div><button class="bank-btn" onclick="window.buyRank('fr')">UPGRADE</button></div>
-    <div class="bank-item"><div><span style="color:#ff007f; font-weight:bold;">Gun Damage</span><br><span style="font-size:0.9rem; color:#aaa;">Rank ${rankDmg} (+${rankDmg*15}%)</span></div><button class="bank-btn" onclick="window.buyRank('dmg')">UPGRADE</button></div>`;
+  const mkBtn = (type, rank, cap, label, color, effect) => {
+    const maxed = rank >= cap;
+    return `<div class="bank-item">
+      <div>
+        <span style="color:${color}; font-weight:bold;">${label}</span>
+        <span style="color:#888; font-size:0.85rem;"> (${rank}/${cap})</span><br>
+        <span style="font-size:0.9rem; color:#aaa;">${effect}</span>
+      </div>
+      <button class="bank-btn" onclick="window.buyRank('${type}')"
+        style="${maxed ? 'background:#444;color:#888;cursor:not-allowed;' : ''}">
+        ${maxed ? 'MAXED' : 'UPGRADE'}
+      </button>
+    </div>`;
+  };
+  document.getElementById('badass-list').innerHTML =
+    mkBtn('hp',  rankHP,       20, 'Max Health',       '#0f0',    `+${rankHP*25} HP total`) +
+    mkBtn('spd', rankSpeed,    10, 'Movement Speed',   '#0ff',    `+${(rankSpeed*0.3).toFixed(1)} Spd total (base 5)`) +
+    mkBtn('fr',  rankFireRate, 15, 'Fire Rate',        '#ffcc00', `-${rankFireRate} fire delay total`) +
+    mkBtn('dmg', rankDmg,      20, 'Gun Damage',       '#ff007f', `+${rankDmg*10}% damage total`);
 }
 
 // ── SKILL TREE ─────────────────────────────
