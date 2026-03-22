@@ -6,11 +6,7 @@
    ========================================== */
 
 // ── Game Feel State ───────────────────────
-let hitStopFrames = 0;
-let cameraRecoilX = 0;
-let cameraRecoilY = 0;
-let muzzleFlashes = [];
-let shellCasings  = [];
+
 
 function spawnMuzzleFlash(x, y, ang, size) {
   muzzleFlashes.push({ x, y, ang, life: 6, maxLife: 6, size });
