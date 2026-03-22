@@ -280,13 +280,12 @@ function loopLooter() {
   } else {
     // Boss spawning handled by zone system
     // Zone-aware enemy spawn
-    if(!isRaidBoss&&!isDuel&&Math.random()<0.05){
-      // Only spawn in current zone
+    if(!isRaidBoss&&!isDuel&&lhEnemies.length<15&&Math.random()<0.02){
       const zoneMaxX = currentZone===1 ? ZONE1_END()-50 : currentZone===2 ? ZONE2_END()-50 : WORLD_W-50;
       const zoneMinX = currentZone===1 ? 50 : currentZone===2 ? ZONE1_END()+50 : ZONE2_END()+50;
       const ex = zoneMinX + Math.random()*(zoneMaxX-zoneMinX);
       const ey = 50 + Math.random()*(WORLD_H-100);
-      if(Math.hypot(lhPlayer.x-ex,lhPlayer.y-ey)>300) spawnEnemy(ex,ey,psychoBaseHp,psychoVarHp,mayhemMult);
+      if(Math.hypot(lhPlayer.x-ex,lhPlayer.y-ey)>400) spawnEnemy(ex,ey,psychoBaseHp,psychoVarHp,mayhemMult);
     }
     // New enemy types spawn (level 10+)
     if(!isRaidBoss&&!isDuel&&!lhBossSpawned&&Math.random()<0.02&&pLevel>=10){
