@@ -273,12 +273,14 @@ function loopLooter() {
       for(let k=0;k<4;k++)genLoot(lhPlayer.x+(Math.random()*100-50),lhPlayer.y+(Math.random()*100-50),false,false,false,true);
     }
   } else {
-    const bossKillThreshold=Math.floor(20+(pLevel-1)*3.5);
+    const _effectiveLevel=lhPlayer?Math.max(1,pLevel):1;
+    const bossKillThreshold=Math.floor(20+(_effectiveLevel-1)*3.5);
     if(!isRaidBoss&&!isDuel&&!lhBossSpawned&&lhKills>=bossKillThreshold){
       lhBossSpawned=true;
       const bossX=Math.max(80,Math.min(WORLD_W-80,lhPlayer.x+400)),bossY=Math.max(80,Math.min(WORLD_H-80,lhPlayer.y));
-      if(runCount>=6)lhEnemies.push({x:bossX,y:bossY,hp:10000*mayhemMult,maxHp:10000*mayhemMult,speed:2.5,type:'boss_goliath',pref:'',w:150,h:150,fT:0,sT:0,aT:0,cd:60});
-      else           lhEnemies.push({x:bossX,y:bossY,hp:1200*mayhemMult,maxHp:1200*mayhemMult,speed:2,type:'boss',pref:'',w:80,h:80,fT:0,sT:0,aT:0,cd:60});
+      const bossLvlMult=Math.pow(1.15,pLevel-1);
+      if(runCount>=6)lhEnemies.push({x:bossX,y:bossY,hp:Math.floor(10000*mayhemMult*bossLvlMult),maxHp:Math.floor(10000*mayhemMult*bossLvlMult),speed:2.5,type:'boss_goliath',pref:'',w:150,h:150,fT:0,sT:0,aT:0,cd:60});
+      else           lhEnemies.push({x:bossX,y:bossY,hp:Math.floor(1200*mayhemMult*bossLvlMult),maxHp:Math.floor(1200*mayhemMult*bossLvlMult),speed:2,type:'boss',pref:'',w:80,h:80,fT:0,sT:0,aT:0,cd:60});
       playSound('die',bossX);spawnParticles(bossX,bossY,'#800080',60,6,50);
     }
     // Standard enemy spawn
@@ -573,7 +575,7 @@ function loopLooter() {
   }
   ctx.fillStyle=lhPlayer.gun.c;ctx.font='14px Courier New';ctx.fillText(`GUN: ${lhPlayer.gun.name} (DMG: ${Math.floor(lhPlayer.gun.dmg)}) | NADE: ${lhPlayer.grenades}/3`,350,20);
   const questTxt=activeQuest===0?'None':activeQuest===1?`Psychos (${questProgress}/25)`:`Loaders (${questProgress}/10)`;
-  const _bkt=Math.floor(20+(pLevel-1)*3.5);
+  const _bkt=Math.floor(20+(Math.max(1,pLevel)-1)*3.5);
   const bossProgressTxt=lhBossSpawned?'BOSS ACTIVE':`BOSS: ${lhKills}/${_bkt}`;
   ctx.fillStyle='#0ff';ctx.fillText(`[I] ECHO INV. | QUEST: ${questTxt} | ${bossProgressTxt}`,350,40);
   if(hasVehicle){ctx.fillStyle=lhPlayer.vehicleCooldown>0?'#888':'#ffcc00';ctx.fillText('[V] Vehicle',650,40);}
