@@ -21,14 +21,8 @@ function genLoot(x, y, forcedLegendary = false, isMoxxi = false, isCasino = fals
 
   // ── Gun Drop ──────────────────────────────
   const rRoll  = Math.random();
-  // Dynamic legendary chance based on source
-  const legChance = typeof getLegendaryChance === 'function'
-    ? getLegendaryChance(forcedLegendary ? 'boss' : isLootPref ? 'elite' : 'normal')
-    : 0.05;
-  let rarity = forcedLegendary ? 4
-    : rRoll > (1 - legChance * 0.3) ? 6   // pearl: 30% of leg chance
-    : rRoll > (1 - legChance * 0.6) ? 5   // etech: 30% of leg chance  
-    : rRoll > (1 - legChance)       ? 4   // legendary
+  let rarity   = forcedLegendary ? 4
+    : rRoll > 0.98 ? 6 : rRoll > 0.94 ? 5 : rRoll > 0.85 ? 4
     : rRoll > 0.70 ? 3 : rRoll > 0.40 ? 2 : rRoll > 0.15 ? 1 : 0;
 
   if (isLootPref && rarity < 3) rarity = 3;
@@ -83,7 +77,6 @@ function genLoot(x, y, forcedLegendary = false, isMoxxi = false, isCasino = fals
   else if (mayhemMode === 20) { dmg *= 50; finalName = 'M20 '  + finalName; }
   else if (mayhemMode === 10) { dmg *= 5;  finalName = 'M10 '  + finalName; }
 
-  if (rarity >= 4 && typeof onLegendaryDrop === 'function') onLegendaryDrop();
   spawnParticles(x, y, colors[rarity], 20, 3, 20);
   lhLoot.push({
     x, y,
@@ -91,6 +84,7 @@ function genLoot(x, y, forcedLegendary = false, isMoxxi = false, isCasino = fals
     gun: { name: finalName, c: colors[rarity], dmg, fr, spd, rarity, wType, timer: 0 },
     life: (forcedLegendary || isMoxxi || isCasino) ? 9999 : 1800
   });
+  if(rarity >= 4) { unlockAchievement('legendary'); }
 }
 
 // ── Draw & pickup loot ────────────────────────────────────
