@@ -14,12 +14,10 @@ body {
   background-color: var(--bg-color);
   color: var(--text-color);
   font-family: 'Courier New', Courier, monospace;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: block;
   min-height: 100vh;
   user-select: none;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* ==========================================
@@ -27,13 +25,7 @@ body {
    ========================================== */
 
 #main-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  width: 90%;
-  max-width: 400px;
-  align-items: center;
-  padding-top: 30px;
+  /* Styles handled by landing page inline CSS in index.html */
 }
 
 h1 {
@@ -99,9 +91,13 @@ button:hover {
   display: none;
   flex-direction: column;
   align-items: center;
-  margin-top: 5px;
+  margin: 5px auto 0;
   width: 100%;
   max-width: 900px;
+  /* Re-add centering since body is no longer flex */
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 canvas {
