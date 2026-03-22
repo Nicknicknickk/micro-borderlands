@@ -2,7 +2,7 @@
    LOOT.JS — Loot & item generation
    ========================================== */
 
-function genLoot(x, y, forcedLegendary = false, isMoxxi = false, isCasino = false, isLootPref = false) {
+function genLoot(x, y, forcedLegendary = false, isMoxxi = false, isCasino = false, isLootPref = false, isBossDrop = false) {
 
   // ── Mod Drop ──────────────────────────────
   if (!forcedLegendary && !isMoxxi && !isCasino && Math.random() < 0.20) {
@@ -39,6 +39,16 @@ function genLoot(x, y, forcedLegendary = false, isMoxxi = false, isCasino = fals
            : rRoll > 0.93  ? 4   // Legendary   5.5%
            : rRoll > 0.60  ? 3   // Epic       33%
            :                 2;  // Rare        60%
+  } else if (isBossDrop) {
+    // Boss drop without mayhem — no guaranteed legendary, but meaningfully better odds than world drop
+    // Legendary ~8%, Epic ~25%, mostly blue/purple
+    rarity = rRoll > 0.999 ? 6   // Pearl       0.1%
+           : rRoll > 0.993 ? 5   // E-Tech      0.6%
+           : rRoll > 0.920 ? 4   // Legendary   7.3%
+           : rRoll > 0.670 ? 3   // Epic       25%
+           : rRoll > 0.370 ? 2   // Rare       30%
+           : rRoll > 0.100 ? 1   // Uncommon   27%
+           :                 0;  // Common     10%
   } else {
     // Standard world drop
     rarity = rRoll > 0.999 ? 6   // Pearl       0.1%

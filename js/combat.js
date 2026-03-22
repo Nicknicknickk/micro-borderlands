@@ -409,12 +409,12 @@ function loopLooter() {
         if(e.type==='raid_boss'||e.type==='crawmerax'||e.type==='pete'||e.type==='terramorphous'){for(let k=0;k<5;k++)genLoot(e.x+(Math.random()*100-50),e.y+(Math.random()*100-50),true);for(let k=0;k<5;k++)genLoot(e.x+(Math.random()*100-50),e.y+(Math.random()*100-50),false,false,false,true);}
         else if(e.type==='lilith_boss'){const mPref=mayhemMode>0?`M${mayhemMode} `:'';lhLoot.push({x:e.x,y:e.y,isMod:false,gun:{name:mPref+'UNIQUE Hellfire',c:'#00ffff',dmg:Math.floor(400*mayhemMult),fr:3,spd:15,timer:0},life:9999});lhLoot.push({x:e.x+40,y:e.y,isMod:true,type:'Armor',name:mPref+"Firehawk's Mantle",desc:`-15% DMG, +${250*mayhemMult} HP`,dmgRed:0.15,hpBonus:250*mayhemMult,c:'#00ffff',life:9999});}
         else if(e.type==='moxxi_boss'){const mPref=mayhemMode>0?`M${mayhemMode} `:'';lhLoot.push({x:e.x,y:e.y,isMod:false,gun:{name:mPref+'UNIQUE Heart Breaker',c:'#00ffff',dmg:Math.floor(600*mayhemMult),fr:15,spd:10,timer:0},life:9999});lhLoot.push({x:e.x+40,y:e.y,isMod:true,type:'Armor',name:mPref+"Moxxi's Corset",desc:`-10% DMG, +${400*mayhemMult} HP`,dmgRed:0.10,hpBonus:400*mayhemMult,c:'#00ffff',life:9999});}
-        else genLoot(e.x,e.y,true);
+        else genLoot(e.x,e.y,mayhemMode>=20,false,false,false,true);
       } else if(e.type==='goliath'){playerCoins+=100;lhKills++;totalKills++;localStorage.setItem('totalKills',totalKills);gainExp(200*mayhemMult);checkAchievements();genLoot(e.x,e.y,false,false,false,e.pref==='Loot');}
       else if(newEnemyTypes.includes(e.type)){
         lhKills++;totalKills++;localStorage.setItem('totalKills',totalKills);playerCoins+=150;gainExp(100*mayhemMult);checkAchievements();
-        if(e.type==='badass_psycho'){genLoot(e.x,e.y,true);badassTokens+=1;localStorage.setItem('badassTokens',badassTokens);}
-        else if(Math.random()<0.35)genLoot(e.x,e.y,false,false,false,true);
+        if(e.type==='badass_psycho'){genLoot(e.x,e.y,mayhemMode>=20);badassTokens+=1;localStorage.setItem('badassTokens',badassTokens);}
+        else if(Math.random()<0.10)genLoot(e.x,e.y,false,false,false,true);
       }
       else{lhKills++;totalKills++;localStorage.setItem('totalKills',totalKills);playerCoins+=20;gainExp(50*mayhemMult);checkAchievements();if(e.pref==='Loot'){genLoot(e.x,e.y,false);genLoot(e.x+10,e.y+10,false);genLoot(e.x-10,e.y-10,false);}else if(Math.random()<0.20)genLoot(e.x,e.y,false);if(activeQuest===1&&e.type==='normal'){questProgress++;localStorage.setItem('borderQProg',questProgress);}}
       localStorage.setItem('borderCoins',playerCoins);lhEnemies.splice(i,1);continue;
