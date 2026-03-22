@@ -20,12 +20,35 @@ function genLoot(x, y, forcedLegendary = false, isMoxxi = false, isCasino = fals
   }
 
   // ── Gun Drop ──────────────────────────────
-  const rRoll  = Math.random();
-  let rarity   = forcedLegendary ? 4
-    : rRoll > 0.98 ? 6 : rRoll > 0.94 ? 5 : rRoll > 0.85 ? 4
-    : rRoll > 0.70 ? 3 : rRoll > 0.40 ? 2 : rRoll > 0.15 ? 1 : 0;
-
-  if (isLootPref && rarity < 3) rarity = 3;
+  // ── Rarity drop rates (based on wiki values) ──────────────
+  // Regular drops:  Common 40%, Uncommon 30%, Rare 20%, Epic 8%, Legendary 1.5%, E-Tech 0.4%, Pearl 0.1%
+  // Boss drops:     skip Common/Uncommon floor, better Epic/Legendary chances
+  // forcedLegendary = guaranteed orange legendary (boss kill reward)
+  const rRoll = Math.random();
+  let rarity;
+  if (forcedLegendary) {
+    // Boss drop: guaranteed legendary+, small chance of E-Tech or Pearl
+    const bossRoll = Math.random();
+    rarity = bossRoll > 0.97 ? 6   // Pearl       3%
+           : bossRoll > 0.85 ? 5   // E-Tech     12%
+           :                   4;  // Legendary  85%
+  } else if (isLootPref) {
+    // Loot Psycho / nest reward — guaranteed at least Rare, better odds above
+    rarity = rRoll > 0.997 ? 6   // Pearl       0.3%
+           : rRoll > 0.985 ? 5   // E-Tech      1.2%
+           : rRoll > 0.93  ? 4   // Legendary   5.5%
+           : rRoll > 0.60  ? 3   // Epic       33%
+           :                 2;  // Rare        60%
+  } else {
+    // Standard world drop
+    rarity = rRoll > 0.999 ? 6   // Pearl       0.1%
+           : rRoll > 0.995 ? 5   // E-Tech      0.4%
+           : rRoll > 0.980 ? 4   // Legendary   1.5%
+           : rRoll > 0.900 ? 3   // Epic        8%
+           : rRoll > 0.700 ? 2   // Rare       20%
+           : rRoll > 0.400 ? 1   // Uncommon   30%
+           :                 0;  // Common     40%
+  }
 
   const colors = ['#ffffff','#00ff00','#0099ff','#800080','#ffa500','#ff00ff','#00ffff'];
   let type = isMoxxi ? 1 : Math.floor(Math.random() * 5);
