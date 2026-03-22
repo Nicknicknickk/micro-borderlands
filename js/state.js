@@ -172,10 +172,18 @@ function getModDesc(name) {
 
 // ── Stats Display ──────────────────────────
 function updateMenuStats() {
-  document.getElementById('stats-display').innerText =
-    `Level: ${pLevel} | EXP: ${pExp}/${getExpRequired(pLevel)}\n` +
-    `Runs: ${runCount} | Credits: $${playerCoins} | Tokens: ${badassTokens}\n` +
-    `Class: ${(localStorage.getItem('borderClass') || 'Zer0').toUpperCase()} | Shield: ${shieldLvl}\n` +
-    `Elements: 🔥Lv${fireLvl} ⚡Lv${shockLvl} 🧪Lv${acidLvl}\n` +
-    `Mayhem: ${mayhemMode === 0 ? 'OFF' : 'M' + mayhemMode}`;
+  const charName = (localStorage.getItem('borderClass') || 'zero').toUpperCase();
+  const mayhemTxt = mayhemMode === 0 ? '<span style="color:#7a7060">OFF</span>'
+    : `<span style="color:#e8321a;font-weight:700">M${mayhemMode}</span>`;
+  const row = (label, value, color='#f0e6c8') =>
+    `<div class="stat-row"><span class="stat-label">${label}</span><span class="stat-value" style="color:${color}">${value}</span></div>`;
+  document.getElementById('stats-display').innerHTML =
+    row('Vault Hunter', charName, '#f5c518') +
+    row('Level', `${pLevel} <span style="color:#7a7060;font-size:.75rem;font-weight:400">/ 72</span>`) +
+    row('EXP', `${pExp} / ${getExpRequired(pLevel)}`, '#00e5ff') +
+    row('Runs Completed', runCount, '#39ff14') +
+    row('Credits', `$${playerCoins.toLocaleString()}`, '#f5c518') +
+    row('Badass Tokens', badassTokens, '#ff6a00') +
+    row('Elements', `🔥${fireLvl} ⚡${shockLvl} 🧪${acidLvl}`) +
+    row('Mayhem Mode', mayhemTxt);
 }
