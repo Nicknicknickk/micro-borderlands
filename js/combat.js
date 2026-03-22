@@ -273,7 +273,8 @@ function loopLooter() {
       for(let k=0;k<4;k++)genLoot(lhPlayer.x+(Math.random()*100-50),lhPlayer.y+(Math.random()*100-50),false,false,false,true);
     }
   } else {
-    if(!isRaidBoss&&!isDuel&&!lhBossSpawned&&lhKills>=20){
+    const bossKillThreshold=Math.floor(20+(pLevel-1)*3.5);
+    if(!isRaidBoss&&!isDuel&&!lhBossSpawned&&lhKills>=bossKillThreshold){
       lhBossSpawned=true;
       const bossX=Math.max(80,Math.min(WORLD_W-80,lhPlayer.x+400)),bossY=Math.max(80,Math.min(WORLD_H-80,lhPlayer.y));
       if(runCount>=6)lhEnemies.push({x:bossX,y:bossY,hp:10000*mayhemMult,maxHp:10000*mayhemMult,speed:2.5,type:'boss_goliath',pref:'',w:150,h:150,fT:0,sT:0,aT:0,cd:60});
@@ -572,7 +573,9 @@ function loopLooter() {
   }
   ctx.fillStyle=lhPlayer.gun.c;ctx.font='14px Courier New';ctx.fillText(`GUN: ${lhPlayer.gun.name} (DMG: ${Math.floor(lhPlayer.gun.dmg)}) | NADE: ${lhPlayer.grenades}/3`,350,20);
   const questTxt=activeQuest===0?'None':activeQuest===1?`Psychos (${questProgress}/25)`:`Loaders (${questProgress}/10)`;
-  ctx.fillStyle='#0ff';ctx.fillText(`[I] ECHO INV. | QUEST: ${questTxt}`,350,40);
+  const _bkt=Math.floor(20+(pLevel-1)*3.5);
+  const bossProgressTxt=lhBossSpawned?'BOSS ACTIVE':`BOSS: ${lhKills}/${_bkt}`;
+  ctx.fillStyle='#0ff';ctx.fillText(`[I] ECHO INV. | QUEST: ${questTxt} | ${bossProgressTxt}`,350,40);
   if(hasVehicle){ctx.fillStyle=lhPlayer.vehicleCooldown>0?'#888':'#ffcc00';ctx.fillText('[V] Vehicle',650,40);}
   if(lhPlayer.skillTimer>0){ctx.fillStyle='#0ff';ctx.fillText('SKILL ACTIVE!',650,25);}
   else if(lhPlayer.skillCooldown<=0){ctx.fillStyle='#0f0';ctx.fillText('[E] SKILL READY',650,25);}
