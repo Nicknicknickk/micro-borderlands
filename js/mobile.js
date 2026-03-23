@@ -9,6 +9,7 @@
 // ── Mobile state ──────────────────────────
 let mobileMode    = localStorage.getItem('mobileMode') === '1';
 let mobileOverlay = null;
+let sticksRafId   = null; // separate from animId — never touches game loop
 
 // ── Stick state ───────────────────────────
 const leftStick  = { active:false, id:null, baseX:0, baseY:0, dx:0, dy:0 };
@@ -374,7 +375,7 @@ function drawSticks() {
   drawStick(leftStick,  'MOVE');
   drawStick(rightStick, 'AIM + FIRE');
 
-  requestAnimationFrame(drawSticks);
+  sticksRafId = requestAnimationFrame(drawSticks);
 }
 
 // ── Orientation check ─────────────────────

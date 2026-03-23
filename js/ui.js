@@ -9,14 +9,12 @@ window.launchGame = function () {
   window.checkMobileOrientation();
   if (shouldRunTutorial()) {
     startTutorial();
-    // Don't init mobile during tutorial — it kills the loop
-    // mobile overlay gets built when tutorial completes instead
-  } else if (runCount > 0) {
-    startSanctuary();
-    setTimeout(() => window.initMobileIfNeeded(), 100);
+    // Don't init mobile during tutorial — overlay built when tutorial completes
   } else {
-    startLooter();
-    setTimeout(() => window.initMobileIfNeeded(), 100);
+    // Always go to sanctuary first — even on run 0
+    // startLooter is only called from sanctuary portal
+    startSanctuary();
+    setTimeout(() => window.initMobileIfNeeded(), 200);
   }
 };
 
