@@ -60,7 +60,7 @@ function loopSanctuary() {
   if (!inSanctuary || isBossMode || inBank || inBadass || inInventory || inSkills || marcusShopOpen) return;
   // Also check Zed screen
   const zedOpen = document.getElementById('zed-screen') &&
-                  document.getElementById('zed-screen').style.display !== 'none';
+                  document.getElementById('zed-screen').style.display === 'flex';
   if (zedOpen) return;
 
   ctx.clearRect(0, 0, gCanvas.width, gCanvas.height);
