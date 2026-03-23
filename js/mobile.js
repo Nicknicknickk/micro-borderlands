@@ -144,6 +144,18 @@ function buildMobileOverlay() {
   mobileOverlay.addEventListener('touchcancel', onTouchEnd,    { passive:false });
 
   drawSticks();
+
+  // Hide action buttons during tutorial — they're not needed
+  updateMobileButtonVisibility();
+}
+
+function updateMobileButtonVisibility() {
+  const isTut = isTutorialActive();
+  const btnIds = ['btn-e','btn-g','btn-skill','btn-i','btn-b','btn-f'];
+  btnIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isTut ? 'none' : 'flex';
+  });
 }
 
 function makeTouchZone(id, left, right, width, height) {
@@ -370,6 +382,7 @@ function drawSticks() {
 
   drawStick(leftStick,  'MOVE');
   drawStick(rightStick, 'AIM + FIRE');
+  updateMobileButtonVisibility();
   sticksRafId = requestAnimationFrame(drawSticks);
 }
 

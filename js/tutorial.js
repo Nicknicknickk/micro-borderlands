@@ -105,6 +105,8 @@ function startTutorial() {
   };
 
   gCanvas.onmouseup = null;
+  // Build mobile overlay during tutorial so touch zones work
+  setTimeout(() => window.initMobileIfNeeded(), 150);
   loopTutorial();
 }
 
