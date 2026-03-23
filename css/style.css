@@ -130,7 +130,7 @@ canvas {
   padding: 40px;
   box-sizing: border-box;
   font-family: sans-serif;
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   z-index: 9999;
@@ -159,7 +159,7 @@ canvas {
   color: #fff;
   width: 100vw;
   height: 100vh;
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   z-index: 10000;
@@ -169,6 +169,12 @@ canvas {
   border: 5px solid var(--text-color);
   box-sizing: border-box;
   overflow-y: auto;
+}
+
+/* Inventory rebuilt layout — needs stretch not center */
+#inv-screen {
+  padding: 0 !important;
+  align-items: stretch !important;
 }
 
 .bank-item {
