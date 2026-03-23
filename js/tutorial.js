@@ -247,6 +247,14 @@ function loopTutorial() {
     if (keys['KeyS'] || keys['ArrowDown'])  lhPlayer.y = Math.min(370, lhPlayer.y + spd);
     if (keys['KeyA'] || keys['ArrowLeft'])  lhPlayer.x = Math.max(250, lhPlayer.x - spd);
     if (keys['KeyD'] || keys['ArrowRight']) lhPlayer.x = Math.min(780, lhPlayer.x + spd);
+    // Mobile stick direct movement
+    if (typeof leftStick !== 'undefined' && leftStick.active) {
+      const norm = Math.hypot(leftStick.dx, leftStick.dy);
+      if (norm > 8) {
+        lhPlayer.x = Math.max(250, Math.min(780, lhPlayer.x + (leftStick.dx / norm) * spd));
+        lhPlayer.y = Math.max(200, Math.min(370, lhPlayer.y + (leftStick.dy / norm) * spd));
+      }
+    }
 
     if (tutorialStep === 3) {
       const moved = Math.abs(lhPlayer.x - 500) > 30 || Math.abs(lhPlayer.y - 280) > 20;

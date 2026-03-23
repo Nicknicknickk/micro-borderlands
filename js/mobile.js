@@ -1,15 +1,15 @@
 /* ==========================================
-   MOBILE.JS — Touch Controls v1.1
+   MOBILE.JS — Touch Controls v1.2
    Dual-stick landscape layout
    Left stick : movement
    Right stick: aim + fire
-   Tutorial   : taps forwarded to canvas
+   Tutorial   : full screen touch zones
    ========================================== */
 
 // ── Mobile state ──────────────────────────
 let mobileMode    = localStorage.getItem('mobileMode') === '1';
 let mobileOverlay = null;
-let sticksRafId   = null; // separate from animId — never touches game loop
+let sticksRafId   = null; // never touches global animId
 
 // ── Stick state ───────────────────────────
 const leftStick  = { active:false, id:null, baseX:0, baseY:0, dx:0, dy:0 };
@@ -48,7 +48,7 @@ function updateMobileMenuBtn() {
   }
 }
 
-// ── Called from launchGame in ui.js ───────
+// ── Called from launchGame / completeTutorial ──
 window.initMobileIfNeeded = function () {
   if (!mobileMode) return;
   if (mobileOverlay) { mobileOverlay.remove(); mobileOverlay = null; }
@@ -77,13 +77,16 @@ function buildMobileOverlay() {
   `;
   mobileOverlay.appendChild(stickCanvas);
 
-  // Left and right touch zones (bottom 45%)
-  const leftZone  = makeTouchZone('left-zone',  '0',    'auto', '50%', '45%');
-  const rightZone = makeTouchZone('right-zone', 'auto', '0',    '50%', '45%');
+  // ── Touch zones ──────────────────────────
+  // During tutorial: full screen split left/right
+  // During gameplay: bottom 55% split left/right
+  // We use ONE left zone and ONE right zone and adjust height dynamically
+  const leftZone  = makeTouchZone('left-zone',  '0',    'auto', '50%', '100%');
+  const rightZone = makeTouchZone('right-zone', 'auto', '0',    '50%', '100%');
   mobileOverlay.appendChild(leftZone);
   mobileOverlay.appendChild(rightZone);
 
-  // Action buttons — right side
+  // ── Action buttons ────────────────────────
   const buttons = [
     { id:'btn-e',     label:'E',    key:'KeyE', color:'#ffcc00', bottom:'52%', right:'3%',  size:44 },
     { id:'btn-g',     label:'G',    key:'KeyG', color:'#ff4400', bottom:'52%', right:'14%', size:44 },
@@ -134,7 +137,7 @@ function buildMobileOverlay() {
   resizeSC();
   window.addEventListener('resize', resizeSC);
 
-  // Touch events on the whole overlay
+  // Touch events
   mobileOverlay.addEventListener('touchstart',  onTouchStart,  { passive:false });
   mobileOverlay.addEventListener('touchmove',   onTouchMove,   { passive:false });
   mobileOverlay.addEventListener('touchend',    onTouchEnd,    { passive:false });
@@ -147,7 +150,7 @@ function makeTouchZone(id, left, right, width, height) {
   const el = document.createElement('div');
   el.id = id;
   el.style.cssText = `
-    position:absolute; bottom:0; left:${left}; right:${right};
+    position:absolute; top:0; left:${left}; right:${right};
     width:${width}; height:${height};
     pointer-events:auto; touch-action:none;
   `;
@@ -159,46 +162,47 @@ function isTutorialActive() {
   return typeof inTutorial !== 'undefined' && inTutorial;
 }
 
-// ── Forward a tap to the canvas as a synthetic mouse event ──
+// ── Forward tap to canvas as mouse event ──
 function forwardTapToCanvas(clientX, clientY, type) {
   const canvas = document.getElementById('game-canvas');
   if (!canvas) return;
-  const evt = new MouseEvent(type, {
-    bubbles: true, cancelable: true,
-    clientX, clientY, button: 0
-  });
-  canvas.dispatchEvent(evt);
+  canvas.dispatchEvent(new MouseEvent(type, {
+    bubbles:true, cancelable:true, clientX, clientY, button:0
+  }));
 }
 
 // ── Touch start ───────────────────────────
 function onTouchStart(e) {
   e.preventDefault();
-
   Array.from(e.changedTouches).forEach(t => {
 
-    // ── Tutorial mode: forward ALL taps to canvas ──
+    // ── Tutorial mode ──────────────────────
     if (isTutorialActive()) {
-      // Update mouse position first so aiming works
       updateMouseFromTouch(t);
+      // Forward tap for dialogue advance + shooting
       forwardTapToCanvas(t.clientX, t.clientY, 'mousedown');
-
-      // Still let movement keys work via left-side touch
+      // Directly call shootTutorial on step 4
+      if (typeof tutorialStep !== 'undefined' && tutorialStep === 4) {
+        if (typeof shootTutorial === 'function') shootTutorial();
+      }
+      // Register left stick for movement (any touch on left half)
       const overlay = document.getElementById('mobile-overlay');
       if (overlay) {
         const rect = overlay.getBoundingClientRect();
         const relX = t.clientX - rect.left;
+        const relY = t.clientY - rect.top;
         if (relX < rect.width / 2 && !leftStick.active) {
           leftStick.active = true;
           leftStick.id     = t.identifier;
           leftStick.baseX  = relX;
-          leftStick.baseY  = t.clientY - rect.top;
+          leftStick.baseY  = relY;
           leftStick.dx = 0; leftStick.dy = 0;
         }
       }
       return;
     }
 
-    // ── Button touches ──
+    // ── Button touches ──────────────────────
     const el = document.elementFromPoint(t.clientX, t.clientY);
     if (el && el.dataset && el.dataset.key) {
       btnTouches[el.id] = t.identifier;
@@ -214,21 +218,17 @@ function onTouchStart(e) {
     const relY = t.clientY - rect.top;
 
     if (relX < rect.width / 2 && !leftStick.active) {
-      // Left stick — movement
       leftStick.active = true;
       leftStick.id     = t.identifier;
       leftStick.baseX  = relX;
       leftStick.baseY  = relY;
       leftStick.dx = 0; leftStick.dy = 0;
-
-      // In sanctuary, a left-side tap near an NPC triggers E
-      if (inSanctuary) {
+      // Sanctuary: left tap near NPC = interact
+      if (typeof inSanctuary !== 'undefined' && inSanctuary) {
         keys['KeyE'] = true;
         setTimeout(() => { keys['KeyE'] = false; }, 120);
       }
-
     } else if (relX >= rect.width / 2 && !rightStick.active) {
-      // Right stick — aim + fire
       rightStick.active = true;
       rightStick.id     = t.identifier;
       rightStick.baseX  = relX;
@@ -242,14 +242,20 @@ function onTouchStart(e) {
 // ── Touch move ────────────────────────────
 function onTouchMove(e) {
   e.preventDefault();
-
   Array.from(e.changedTouches).forEach(t => {
 
-    // Tutorial: update mouse aim continuously
     if (isTutorialActive()) {
       updateMouseFromTouch(t);
       if (leftStick.active && t.identifier === leftStick.id) {
         updateLeftStickDelta(t);
+        // Also move player directly in tutorial for responsiveness
+        if (lhPlayer) {
+          const norm = Math.hypot(leftStick.dx, leftStick.dy);
+          if (norm > STICK_DEAD_ZONE) {
+            lhPlayer.x = Math.max(250, Math.min(780, lhPlayer.x + (leftStick.dx / norm) * 4));
+            lhPlayer.y = Math.max(200, Math.min(370, lhPlayer.y + (leftStick.dy / norm) * 4));
+          }
+        }
       }
       return;
     }
@@ -265,10 +271,8 @@ function onTouchMove(e) {
       let dx = (t.clientX - rect.left) - rightStick.baseX;
       let dy = (t.clientY - rect.top)  - rightStick.baseY;
       const dist = Math.hypot(dx, dy);
-      if (dist > STICK_RADIUS) { dx = (dx/dist)*STICK_RADIUS; dy = (dy/dist)*STICK_RADIUS; }
+      if (dist > STICK_RADIUS) { dx=(dx/dist)*STICK_RADIUS; dy=(dy/dist)*STICK_RADIUS; }
       rightStick.dx = dx; rightStick.dy = dy;
-
-      // Aim mouse position
       if (dist > STICK_DEAD_ZONE && lhPlayer) {
         const ang = Math.atan2(dy, dx);
         lhMouse.screenX = lhPlayer.x + Math.cos(ang) * 200;
@@ -281,15 +285,14 @@ function onTouchMove(e) {
 // ── Touch end ─────────────────────────────
 function onTouchEnd(e) {
   e.preventDefault();
-
   Array.from(e.changedTouches).forEach(t => {
 
-    // Tutorial: forward mouseup to canvas
     if (isTutorialActive()) {
       forwardTapToCanvas(t.clientX, t.clientY, 'mouseup');
       if (leftStick.active && t.identifier === leftStick.id) {
         leftStick.active = false; leftStick.dx = 0; leftStick.dy = 0;
-        keys['KeyW']=false; keys['KeyS']=false; keys['KeyA']=false; keys['KeyD']=false;
+        keys['KeyW']=false; keys['KeyS']=false;
+        keys['KeyA']=false; keys['KeyD']=false;
       }
       return;
     }
@@ -305,9 +308,9 @@ function onTouchEnd(e) {
 
     if (leftStick.active && t.identifier === leftStick.id) {
       leftStick.active = false; leftStick.dx = 0; leftStick.dy = 0;
-      keys['KeyW']=false; keys['KeyS']=false; keys['KeyA']=false; keys['KeyD']=false;
+      keys['KeyW']=false; keys['KeyS']=false;
+      keys['KeyA']=false; keys['KeyD']=false;
     }
-
     if (rightStick.active && t.identifier === rightStick.id) {
       rightStick.active = false; rightStick.dx = 0; rightStick.dy = 0;
       lhShooting = false;
@@ -319,7 +322,7 @@ function onTouchEnd(e) {
 function updateMouseFromTouch(t) {
   const canvas = document.getElementById('game-canvas');
   if (!canvas) return;
-  const rect   = canvas.getBoundingClientRect();
+  const rect = canvas.getBoundingClientRect();
   lhMouse.screenX = (t.clientX - rect.left) * (canvas.width  / rect.width);
   lhMouse.screenY = (t.clientY - rect.top)  * (canvas.height / rect.height);
 }
@@ -349,23 +352,16 @@ function drawSticks() {
 
   const drawStick = (stick, label) => {
     if (!stick.active) return;
-    // Outer ring
     sCtx.beginPath();
     sCtx.arc(stick.baseX, stick.baseY, STICK_RADIUS, 0, Math.PI*2);
     sCtx.strokeStyle = 'rgba(255,255,255,0.25)';
-    sCtx.lineWidth = 2;
-    sCtx.stroke();
-    sCtx.fillStyle = 'rgba(255,255,255,0.05)';
-    sCtx.fill();
-    // Thumb nub
+    sCtx.lineWidth = 2; sCtx.stroke();
+    sCtx.fillStyle = 'rgba(255,255,255,0.05)'; sCtx.fill();
     sCtx.beginPath();
-    sCtx.arc(stick.baseX + stick.dx, stick.baseY + stick.dy, 22, 0, Math.PI*2);
-    sCtx.fillStyle   = 'rgba(255,255,255,0.3)';
-    sCtx.fill();
+    sCtx.arc(stick.baseX+stick.dx, stick.baseY+stick.dy, 22, 0, Math.PI*2);
+    sCtx.fillStyle = 'rgba(255,255,255,0.3)'; sCtx.fill();
     sCtx.strokeStyle = 'rgba(255,255,255,0.55)';
-    sCtx.lineWidth = 2;
-    sCtx.stroke();
-    // Label
+    sCtx.lineWidth = 2; sCtx.stroke();
     sCtx.fillStyle = 'rgba(255,255,255,0.45)';
     sCtx.font = 'bold 11px "Courier New"';
     sCtx.textAlign = 'center';
@@ -374,7 +370,6 @@ function drawSticks() {
 
   drawStick(leftStick,  'MOVE');
   drawStick(rightStick, 'AIM + FIRE');
-
   sticksRafId = requestAnimationFrame(drawSticks);
 }
 
@@ -385,7 +380,6 @@ window.checkMobileOrientation = function () {
   if (!warn) return;
   warn.style.display = window.innerWidth > window.innerHeight ? 'none' : 'flex';
 };
-
 window.addEventListener('resize', window.checkMobileOrientation);
 window.addEventListener('orientationchange', window.checkMobileOrientation);
 
