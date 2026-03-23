@@ -1,5 +1,7 @@
 /* ==========================================
-   SANCTUARY.JS — The hub world loop v2.0
+   SANCTUARY.JS — The hub world loop v2.1
+   Patched: Marcus NPC, Zed shield shop,
+   marcusShopOpen guard
    ========================================== */
 
 function startSanctuary() {
@@ -8,9 +10,17 @@ function startSanctuary() {
   inSanctuary = true; inVehicle = false;
   lhParticles = []; slotsSpinTimer = 0; dayNightTimer = 0;
 
+  // ── Refresh Marcus's shop stock each run ──
+  refreshMarcusShop();
+
   const charClass = localStorage.getItem('borderClass') || 'zero';
   lhPlayer = buildPlayer(charClass);
   lhPlayer.x = 400; lhPlayer.y = 225;
+
+  // Apply saved shield type to player stats
+  if (typeof equippedShield !== 'undefined' && equippedShield) {
+    applyShieldToPlayer(equippedShield);
+  }
 
   lhCam = { x: 0, y: 0 };
   lhLoot = []; lhEnemies = []; lhBullets = []; lhEnemyBullets = [];
@@ -46,7 +56,12 @@ function startSanctuary() {
 
 // ─────────────────────────────────────────────────────────
 function loopSanctuary() {
-  if (!inSanctuary || isBossMode || inBank || inBadass || inInventory || inSkills) return;
+  // ── Guard: pause loop when any overlay is open ──────────
+  if (!inSanctuary || isBossMode || inBank || inBadass || inInventory || inSkills || marcusShopOpen) return;
+  // Also check Zed screen
+  const zedOpen = document.getElementById('zed-screen') &&
+                  document.getElementById('zed-screen').style.display !== 'none';
+  if (zedOpen) return;
 
   ctx.clearRect(0, 0, gCanvas.width, gCanvas.height);
 
@@ -93,9 +108,10 @@ function loopSanctuary() {
   else if (activeQuest === 2 && questProgress >= 10) bountyMsg = 'Press E: Claim Tokens';
 
   // ── NPC definitions ───────────────────────
+  // Marcus is at x:600, y:350 (between Catch-A-Ride and Badass Ranks)
   const npcs = [
     { name: 'Claptrap',      x: 100, y: 100, img: clapImg,        fallback: '🤖',     msg: 'Press E: Buy Legendary (5000c)' },
-    { name: 'Dr. Zed',       x: 200, y: 100, img: zedImg,         fallback: 'Zed',    msg: 'E: Shield (+50) 500c | Q: Grenades 50c' },
+    { name: 'Dr. Zed',       x: 200, y: 100, img: zedImg,         fallback: 'Zed',    msg: 'Press E: Zed\'s Shield Shop | Q: Grenades 50c' },
     { name: 'Quick Change',  x: 300, y: 100, img: quickChangeImg,  fallback: '🪞',     msg: 'Press E: Change Class' },
     { name: 'Portal',        x: 400, y: 80,  img: null,            fallback: 'Portal', msg: `[E] Enter: ${mapData[activeMapIndex].name} | [Q] Change Map` },
     { name: 'Raid Portal',   x: 500, y: 100, img: null,            fallback: '🟣',     msg: 'Press E: Enter Raid Boss (2000c)' },
@@ -106,6 +122,7 @@ function loopSanctuary() {
     { name: 'Bounty Board',  x: 200, y: 350, img: bountyImg,       fallback: '📋',     msg: bountyMsg },
     { name: 'Lilith',        x: 300, y: 350, img: lilithImg,       fallback: '🔥',     msg: lilithMsg + ' | C: Duel' },
     { name: 'Catch-A-Ride',  x: 500, y: 350, img: catchARideImg,   fallback: 'vehicle',msg: hasVehicle?'Vehicle Unlocked! Press V in Combat':'Press E: Buy Runner (2000c)' },
+    { name: 'Marcus',        x: 600, y: 350, img: null,            fallback: '🎩',     msg: 'Press E: Marcus\'s Munitions — Buy & Sell Guns' },
     { name: 'Badass Ranks',  x: 700, y: 350, img: badassImg,       fallback: 'Badass', msg: `Press E: Spend Tokens (${badassTokens})` },
     { name: 'Skill Tree',    x: 400, y: 350, img: null,            fallback: '🧬',     msg: 'Press E: Upgrade Skills' }
   ];
@@ -119,6 +136,18 @@ function loopSanctuary() {
       ctx.fillStyle = '#0ff'; ctx.beginPath(); ctx.arc(n.x, n.y, 25, 0, Math.PI*2); ctx.fill();
     } else if (n.name === 'Raid Portal') {
       ctx.fillStyle = '#a020f0'; ctx.beginPath(); ctx.arc(n.x, n.y, 25, 0, Math.PI*2); ctx.fill();
+    } else if (n.name === 'Marcus') {
+      // Draw Marcus as a top-hat + coat silhouette
+      ctx.fillStyle = '#8b4513';
+      ctx.beginPath(); ctx.arc(n.x, n.y - 8, 14, 0, Math.PI * 2); ctx.fill(); // head
+      ctx.fillStyle = '#222';
+      ctx.fillRect(n.x - 18, n.y - 22, 36, 12); // hat brim
+      ctx.fillRect(n.x - 12, n.y - 38, 24, 18); // hat top
+      ctx.fillStyle = '#8b0000';
+      ctx.fillRect(n.x - 16, n.y + 6, 32, 20);  // coat
+      ctx.fillStyle = '#ffcc00';
+      ctx.font = '10px Arial'; ctx.textAlign = 'center';
+      ctx.fillText('🎩', n.x, n.y + 5);
     } else if (n.name === 'Bounty Board' || n.name === 'Quick Change') {
       ctx.fillStyle = '#ffff00'; ctx.font = '30px Arial'; ctx.textAlign = 'center'; ctx.fillText(n.fallback, n.x, n.y + 10);
     } else if (n.name === 'Skill Tree') {
@@ -145,136 +174,140 @@ function loopSanctuary() {
       playSound('coin'); playSound('coin');
       lhDmgText.push({ x:700, y:20, txt:'JACKPOT!', life:60, c:'#ffcc00' });
       genLoot(700, 120, false, false, true);
+      unlockAchievement('jackpot');
     }
-    ctx.fillStyle='#111'; ctx.fillRect(670,10,60,30);
-    ctx.fillStyle='#fff'; ctx.font='20px Arial'; ctx.textAlign='center';
-    ctx.fillText(`${s1}${s2}${s3}`,700,32); ctx.textAlign='left';
+    ctx.fillStyle='rgba(0,0,0,0.9)'; ctx.fillRect(670,10,60,30);
+    ctx.strokeStyle='#ffcc00'; ctx.lineWidth=2; ctx.strokeRect(670,10,60,30);
+    ctx.font='18px Arial'; ctx.textAlign='center';
+    ctx.fillText(`${s1}${s2}${s3}`,700,30);
+    ctx.textAlign='left';
   }
 
-  // ── [C] key — Duels ──────────────────────
-  if (!inDialog && (keys['KeyC'] || keys['c'])) {
-    keys['KeyC'] = false; keys['c'] = false;
-    if (nearNPC && nearNPC.name === 'Lilith') { window.setMusicState('combat'); startLooter(false, 'Lilith'); return; }
-    if (nearNPC && nearNPC.name === 'Moxxi')  { window.setMusicState('combat'); startLooter(false, 'Moxxi');  return; }
-  }
-
-  // ── [E] key — NPC interactions ───────────
+  // ── [E] key ───────────────────────────────
   if (!inDialog && (keys['KeyE'] || keys['e'])) {
     keys['KeyE'] = false; keys['e'] = false;
-    if (nearNPC) {
-      const n = nearNPC;
+    if (!nearNPC) return;
+    const n = nearNPC;
 
-      if (n.name === 'Portal') {
-        window.setMusicState('combat'); startLooter(false); return;
+    if (n.name === 'Portal') {
+      inSanctuary = false;
+      localStorage.setItem('borderRuns', ++runCount);
+      localStorage.setItem('borderCoins', playerCoins);
+      startLooter();
 
-      } else if (n.name === 'Raid Portal') {
-        if (playerCoins >= 2000) {
-          playerCoins -= 2000; localStorage.setItem('borderCoins', playerCoins);
-          window.setMusicState('boss'); startLooter(true); return;
-        } else { playSound('hit'); lhDmgText.push({x:n.x,y:n.y-40,txt:'NEED 2000c!',life:40,c:'#f00'}); }
+    } else if (n.name === 'Raid Portal') {
+      if (playerCoins >= 2000) {
+        playerCoins -= 2000; localStorage.setItem('borderCoins', playerCoins);
+        inSanctuary = false;
+        localStorage.setItem('borderRuns', ++runCount);
+        startLooter(true);
+      } else { playSound('hit'); }
 
-      } else if (n.name === 'Bounty Board') {
-        if (activeQuest === 0) {
-          activeQuest = Math.random()>0.5?1:2; questProgress=0;
-          localStorage.setItem('borderQuest',activeQuest); localStorage.setItem('borderQProg',0);
-          playSound('ability'); lhDmgText.push({x:n.x,y:n.y-40,txt:'BOUNTY ACCEPTED!',life:40,c:'#0f0'});
-        } else if (activeQuest===1&&questProgress>=25) {
-          activeQuest=0; questProgress=0;
-          localStorage.setItem('borderQuest',0); localStorage.setItem('borderQProg',0);
-          playSound('coin'); genLoot(n.x,n.y+40,true);
-          lhDmgText.push({x:n.x,y:n.y-40,txt:'BOUNTY CLEARED!',life:40,c:'#0f0'}); gainExp(1000);
-        } else if (activeQuest===2&&questProgress>=10) {
-          activeQuest=0; questProgress=0;
-          localStorage.setItem('borderQuest',0); localStorage.setItem('borderQProg',0);
+    } else if (n.name === 'Bounty Board') {
+      if (activeQuest === 0) {
+        activeQuest = 1; questProgress = 0;
+        localStorage.setItem('borderQuest', activeQuest); localStorage.setItem('borderQProg', questProgress);
+        playSound('ability'); lhDmgText.push({x:n.x,y:n.y-40,txt:'BOUNTY ACCEPTED!',life:40,c:'#ff0'});
+      } else if ((activeQuest===1&&questProgress>=25)||(activeQuest===2&&questProgress>=10)) {
+        if (activeQuest===1) {
+          playerCoins+=500; localStorage.setItem('borderCoins',playerCoins);
+          genLoot(n.x,n.y+40,false); playSound('coin');
+          lhDmgText.push({x:n.x,y:n.y-40,txt:'+500c + LOOT!',life:40,c:'#ff0'});
+        } else {
           badassTokens+=3; localStorage.setItem('badassTokens',badassTokens);
           playSound('coin'); lhDmgText.push({x:n.x,y:n.y-40,txt:'+3 TOKENS!',life:40,c:'#0f0'}); gainExp(1000);
-        } else { playSound('hit'); }
+        }
+        activeQuest=0; questProgress=0;
+        localStorage.setItem('borderQuest',0); localStorage.setItem('borderQProg',0);
+      } else { playSound('hit'); }
 
-      } else if (n.name==='Bank')         { window.openBank();
-      } else if (n.name==='Badass Ranks') { window.openBadass();
-      } else if (n.name==='Skill Tree')   { window.openSkills();
+    } else if (n.name==='Bank')         { window.openBank();
+    } else if (n.name==='Badass Ranks') { window.openBadass();
+    } else if (n.name==='Skill Tree')   { window.openSkills();
 
-      } else if (n.name === 'Mayhem') {
-        if      (mayhemMode===0)  mayhemMode=10;
-        else if (mayhemMode===10) mayhemMode=20;
-        else if (mayhemMode===20) mayhemMode=50;
-        else                      mayhemMode=0;
-        localStorage.setItem('borderMayhem',mayhemMode);
-        playSound('ability'); spawnParticles(n.x,n.y,'#ff0000',40,5,40);
-        lhDmgText.push({x:n.x,y:n.y-40,txt:mayhemMode===0?'MAYHEM OFF':`MAYHEM ${mayhemMode} ON!`,life:40,c:'#ff0000'});
-        updateMenuStats();
+    // ── Marcus — gun shop & sell ────────────
+    } else if (n.name === 'Marcus') {
+      window.openMarcus();
 
-      } else if (n.name==='Catch-A-Ride'&&!hasVehicle) {
-        if (playerCoins>=2000) {
-          playerCoins-=2000; hasVehicle=1;
-          localStorage.setItem('borderVehicle',1); localStorage.setItem('borderCoins',playerCoins);
-          playSound('ability'); spawnParticles(n.x,n.y,'#ff6600',40,5,40);
-          lhDmgText.push({x:n.x,y:n.y-40,txt:'VEHICLE UNLOCKED!',life:40,c:'#ffcc00'});
-        } else { playSound('hit'); }
+    // ── Dr. Zed — shield shop (replaces old inline logic) ──
+    } else if (n.name === 'Dr. Zed') {
+      window.openZed();
 
-      } else if (n.name==='Claptrap') {
-        if (playerCoins>=5000) {
-          playerCoins-=5000; localStorage.setItem('borderCoins',playerCoins);
-          playSound('coin'); genLoot(n.x,n.y+40,true);
-          spawnParticles(n.x,n.y,'#ffffff',30,4,30);
-          lhDmgText.push({x:n.x,y:n.y-40,txt:'LEGENDARY BOUGHT!',life:40,c:'#ffa500'});
-        } else { playSound('hit'); }
+    } else if (n.name === 'Mayhem') {
+      if      (mayhemMode===0)  mayhemMode=10;
+      else if (mayhemMode===10) mayhemMode=20;
+      else if (mayhemMode===20) mayhemMode=50;
+      else                      mayhemMode=0;
+      localStorage.setItem('borderMayhem',mayhemMode);
+      playSound('ability'); spawnParticles(n.x,n.y,'#ff0000',40,5,40);
+      lhDmgText.push({x:n.x,y:n.y-40,txt:mayhemMode===0?'MAYHEM OFF':`MAYHEM ${mayhemMode} ON!`,life:40,c:'#ff0000'});
+      updateMenuStats();
 
-      } else if (n.name==='Dr. Zed') {
-        if (playerCoins>=500) {
-          playerCoins-=500; shieldLvl++;
-          localStorage.setItem('borderShield',shieldLvl); localStorage.setItem('borderCoins',playerCoins);
-          playSound('ability'); spawnParticles(n.x,n.y,'#00aaff',30,4,30);
-          lhPlayer.maxShield=50+(shieldLvl*50); lhPlayer.shield=lhPlayer.maxShield;
-          lhDmgText.push({x:n.x,y:n.y-40,txt:'+50 MAX SHIELD!',life:40,c:'#00aaff'});
-        } else { playSound('hit'); }
+    } else if (n.name==='Catch-A-Ride'&&!hasVehicle) {
+      if (playerCoins>=2000) {
+        playerCoins-=2000; hasVehicle=1;
+        localStorage.setItem('borderVehicle',1); localStorage.setItem('borderCoins',playerCoins);
+        playSound('ability'); spawnParticles(n.x,n.y,'#ff6600',40,5,40);
+        lhDmgText.push({x:n.x,y:n.y-40,txt:'VEHICLE UNLOCKED!',life:40,c:'#ffcc00'});
+        unlockAchievement('road_warrior');
+      } else { playSound('hit'); }
 
-      } else if (n.name==='Moxxi') {
-        if (playerCoins>=100) {
-          playerCoins-=100; localStorage.setItem('borderCoins',playerCoins);
-          moxxiTips+=100; localStorage.setItem('moxxiTips',moxxiTips);
-          playSound('coin'); spawnParticles(n.x,n.y,'#ff007f',15,3,20);
-          lhDmgText.push({x:n.x,y:n.y-40,txt:'TIP ACCEPTED!',life:30,c:'#ff007f'});
-          if(moxxiTips>=1000){genLoot(n.x,n.y+40,false,true);moxxiTips=0;localStorage.setItem('moxxiTips',0);}
-        } else { playSound('hit'); }
+    } else if (n.name==='Claptrap') {
+      if (playerCoins>=5000) {
+        playerCoins-=5000; localStorage.setItem('borderCoins',playerCoins);
+        playSound('coin'); genLoot(n.x,n.y+40,true);
+        spawnParticles(n.x,n.y,'#ffffff',30,4,30);
+        lhDmgText.push({x:n.x,y:n.y-40,txt:'LEGENDARY BOUGHT!',life:40,c:'#ffa500'});
+      } else { playSound('hit'); }
 
-      } else if (n.name==='Slots') {
-        if (playerCoins>=200&&slotsSpinTimer<=0) {
-          playerCoins-=200; localStorage.setItem('borderCoins',playerCoins);
-          playSound('ability'); slotsSpinTimer=120;
-        } else if (slotsSpinTimer<=0) { playSound('hit'); }
+    } else if (n.name==='Moxxi') {
+      if (playerCoins>=100) {
+        playerCoins-=100; localStorage.setItem('borderCoins',playerCoins);
+        moxxiTips+=100; localStorage.setItem('moxxiTips',moxxiTips);
+        playSound('coin'); spawnParticles(n.x,n.y,'#ff007f',15,3,20);
+        lhDmgText.push({x:n.x,y:n.y-40,txt:'TIP ACCEPTED!',life:30,c:'#ff007f'});
+        if(moxxiTips>=1000){genLoot(n.x,n.y+40,false,true);moxxiTips=0;localStorage.setItem('moxxiTips',0);}
+      } else { playSound('hit'); }
 
-      } else if (n.name==='Quick Change') {
-        playSound('ability');
-        const classes=['zero','maya','axton','salvador','krieg','gaige'];
-        const nextClass=classes[(classes.indexOf(lhPlayer.char)+1)%classes.length];
-        lhPlayer.char=nextClass; localStorage.setItem('borderClass',nextClass);
-        spawnParticles(n.x,n.y,'#fff',30,4,30);
-        lhDmgText.push({x:n.x,y:n.y-40,txt:`CLASS: ${nextClass.toUpperCase()}`,life:40,c:'#0ff'});
-        updateMenuStats();
+    } else if (n.name==='Slots') {
+      if (playerCoins>=200&&slotsSpinTimer<=0) {
+        playerCoins-=200; localStorage.setItem('borderCoins',playerCoins);
+        playSound('ability'); slotsSpinTimer=120;
+      } else if (slotsSpinTimer<=0) { playSound('hit'); }
 
-      } else if (n.name==='Lilith') {
-        if (fireLvl<33&&playerCoins>=200) {
-          playerCoins-=200; fireLvl++; localStorage.setItem('borderFire',fireLvl); localStorage.setItem('borderCoins',playerCoins);
-          playSound('ability'); spawnParticles(n.x,n.y,'#ff4500',30,5,30);
-          lhDmgText.push({x:n.x,y:n.y-40,txt:'+1 FIRE LVL!',life:40,c:'#ff4500'});
-        } else if (fireLvl===33&&shockLvl<33&&playerCoins>=200) {
-          playerCoins-=200; shockLvl++; localStorage.setItem('borderShock',shockLvl); localStorage.setItem('borderCoins',playerCoins);
-          playSound('ability'); spawnParticles(n.x,n.y,'#00ffff',30,5,30);
-          lhDmgText.push({x:n.x,y:n.y-40,txt:'+1 SHOCK LVL!',life:40,c:'#00ffff'});
-        } else if (fireLvl===33&&shockLvl===33&&acidLvl<33&&playerCoins>=200) {
-          playerCoins-=200; acidLvl++; localStorage.setItem('borderAcid',acidLvl); localStorage.setItem('borderCoins',playerCoins);
-          playSound('ability'); spawnParticles(n.x,n.y,'#32cd32',30,5,30);
-          lhDmgText.push({x:n.x,y:n.y-40,txt:'+1 ACID LVL!',life:40,c:'#32cd32'});
-        } else { playSound('hit'); }
-      }
+    } else if (n.name==='Quick Change') {
+      playSound('ability');
+      const classes=['zero','maya','axton','salvador','krieg','gaige'];
+      const nextClass=classes[(classes.indexOf(lhPlayer.char)+1)%classes.length];
+      lhPlayer.char=nextClass; localStorage.setItem('borderClass',nextClass);
+      spawnParticles(n.x,n.y,'#fff',30,4,30);
+      lhDmgText.push({x:n.x,y:n.y-40,txt:`CLASS: ${nextClass.toUpperCase()}`,life:40,c:'#0ff'});
+      updateMenuStats();
+
+    } else if (n.name==='Lilith') {
+      if (fireLvl<33&&playerCoins>=200) {
+        playerCoins-=200; fireLvl++; localStorage.setItem('borderFire',fireLvl); localStorage.setItem('borderCoins',playerCoins);
+        playSound('ability'); spawnParticles(n.x,n.y,'#ff4500',30,5,30);
+        lhDmgText.push({x:n.x,y:n.y-40,txt:'+1 FIRE LVL!',life:40,c:'#ff4500'});
+      } else if (fireLvl===33&&shockLvl<33&&playerCoins>=200) {
+        playerCoins-=200; shockLvl++; localStorage.setItem('borderShock',shockLvl); localStorage.setItem('borderCoins',playerCoins);
+        playSound('ability'); spawnParticles(n.x,n.y,'#00ffff',30,5,30);
+        lhDmgText.push({x:n.x,y:n.y-40,txt:'+1 SHOCK LVL!',life:40,c:'#00ffff'});
+      } else if (fireLvl===33&&shockLvl===33&&acidLvl<33&&playerCoins>=200) {
+        playerCoins-=200; acidLvl++; localStorage.setItem('borderAcid',acidLvl); localStorage.setItem('borderCoins',playerCoins);
+        playSound('ability'); spawnParticles(n.x,n.y,'#32cd32',30,5,30);
+        lhDmgText.push({x:n.x,y:n.y-40,txt:'+1 ACID LVL!',life:40,c:'#32cd32'});
+      } else { playSound('hit'); }
     }
   }
 
   // ── [Q] key ───────────────────────────────
+  // NOTE: Zed grenade purchase is now inside the Zed shield shop UI.
+  // Q near Zed still works as a quick grenade refill shortcut.
   if (!inDialog && (keys['KeyQ'] || keys['q'])) {
     keys['KeyQ'] = false; keys['q'] = false;
     if (nearNPC && nearNPC.name==='Dr. Zed') {
+      // Quick grenade refill without opening the full shop
       if (playerCoins>=50&&lhPlayer.grenades<3) {
         playerCoins-=50; lhPlayer.grenades=3;
         localStorage.setItem('borderGrenades',3); localStorage.setItem('borderCoins',playerCoins);
@@ -290,6 +323,16 @@ function loopSanctuary() {
         activeMapIndex=nextMap; localStorage.setItem('borderMap',activeMapIndex);
         playSound('ability'); lhDmgText.push({x:nearNPC.x,y:nearNPC.y-40,txt:mapData[activeMapIndex].name,life:40,c:'#0ff'});
       }
+    }
+  }
+
+  // ── [C] key — Duels ──────────────────────
+  if (!inDialog && (keys['KeyC'] || keys['c'])) {
+    keys['KeyC'] = false; keys['c'] = false;
+    if (nearNPC && nearNPC.name === 'Lilith') {
+      inSanctuary = false; startLooter(false, 'Lilith');
+    } else if (nearNPC && nearNPC.name === 'Moxxi') {
+      inSanctuary = false; startLooter(false, 'Moxxi');
     }
   }
 
@@ -326,12 +369,21 @@ function loopSanctuary() {
   ctx.fillStyle='#111'; ctx.fillRect(0,445,800,5);
   ctx.fillStyle='#0ff'; ctx.fillRect(0,445,(pExp/getExpRequired(pLevel))*800,5);
   ctx.fillStyle='#fff'; ctx.font='15px Courier New';
-  ctx.fillText(`Credits: $${playerCoins} | Tokens: ${badassTokens} | Gun: ${lhPlayer.gun.name} | Lv${pLevel}`,10,435);
+
+  // Show equipped shield name in HUD
+  const shdName = (typeof equippedShield !== 'undefined' && equippedShield)
+    ? equippedShield.name
+    : `Shield Lv${shieldLvl}`;
+  ctx.fillText(
+    `Credits: $${playerCoins} | Tokens: ${badassTokens} | Gun: ${lhPlayer.gun.name} | Lv${pLevel} | ${shdName}`,
+    10, 435
+  );
+
   if(nearNPC&&!inDialog){
     ctx.fillStyle='#ffcc00'; ctx.font='bold 20px Arial'; ctx.textAlign='center';
     ctx.fillText(nearNPC.msg,400,200); ctx.textAlign='left';
   }
 
-  statusText.innerText='WASD: Move | E: Interact | Q: Alt Action | C: Duel | F: Pick Up | I: Inventory | B: Vault';
+  statusText.innerText='WASD: Move | E: Interact | Q: Alt/Grenades | C: Duel | F: Pick Up | I: Inventory | B: Vault';
   animId = requestAnimationFrame(loopSanctuary);
 }
