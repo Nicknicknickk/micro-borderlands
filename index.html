@@ -333,6 +333,20 @@
   <div class="corner-mark bl"></div>
   <div class="corner-mark br"></div>
 
+  <!-- ── Orientation warning (mobile landscape only) ── -->
+  <div id="orientation-warn" style="
+    display:none;
+    position:fixed;inset:0;z-index:99999;
+    background:#0d0b08;
+    flex-direction:column;align-items:center;justify-content:center;
+    font-family:'Courier New',monospace;color:#ffa500;text-align:center;
+    padding:40px;
+  ">
+    <div style="font-size:4rem;margin-bottom:20px;">📱</div>
+    <div style="font-size:1.8rem;font-weight:bold;letter-spacing:3px;">ROTATE DEVICE</div>
+    <div style="color:#888;margin-top:12px;font-size:1rem;">Landscape mode required for mobile play</div>
+  </div>
+
   <!-- ── Boss mode fake screen ── -->
   <div id="boss-screen">
     <h2>System Diagnostic Tool - Workspace v4.2.1</h2>
@@ -427,6 +441,10 @@
       <button class="menu-btn menu-btn-secondary" onclick="window.showAchievements()">
         🏆 &nbsp; TROPHY ROOM
       </button>
+      <button id="mobile-mode-btn" class="menu-btn" onclick="window.toggleMobileMode()"
+        style="color:#555;border:2px solid #333;box-shadow:none;font-size:1.1rem;padding:10px 30px;">
+        📱 &nbsp; MOBILE MODE: OFF
+      </button>
       <div class="menu-divider"></div>
       <div class="menu-btn-row">
         <button class="menu-btn" onclick="window.exportSave()">⬆ Export Save</button>
@@ -495,6 +513,7 @@
   <script src="js/combat.js"></script>
   <script src="js/sanctuary.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/mobile.js"></script>
 
   <script>
     // ── Populate landing page HUD from localStorage ──

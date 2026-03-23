@@ -6,10 +6,15 @@
 window.launchGame = function () {
   mainMenu.style.display      = 'none';
   gameContainer.style.display = 'flex';
+  // ── Mobile: check orientation then init controls ──
+  window.checkMobileOrientation();
   if (shouldRunTutorial()) startTutorial();
   else if (runCount > 0) startSanctuary();
   else startLooter();
+  // Init touch overlay after game loop starts
+  setTimeout(() => window.initMobileIfNeeded(), 100);
 };
+
 
 window.showAchievements = function () {
   mainMenu.style.display      = 'none';
