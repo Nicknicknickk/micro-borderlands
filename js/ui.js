@@ -6,13 +6,18 @@
 window.launchGame = function () {
   mainMenu.style.display      = 'none';
   gameContainer.style.display = 'flex';
-  // ── Mobile: check orientation then init controls ──
   window.checkMobileOrientation();
-  if (shouldRunTutorial()) startTutorial();
-  else if (runCount > 0) startSanctuary();
-  else startLooter();
-  // Init touch overlay after game loop starts
-  setTimeout(() => window.initMobileIfNeeded(), 100);
+  if (shouldRunTutorial()) {
+    startTutorial();
+    // Don't init mobile during tutorial — it kills the loop
+    // mobile overlay gets built when tutorial completes instead
+  } else if (runCount > 0) {
+    startSanctuary();
+    setTimeout(() => window.initMobileIfNeeded(), 100);
+  } else {
+    startLooter();
+    setTimeout(() => window.initMobileIfNeeded(), 100);
+  }
 };
 
 

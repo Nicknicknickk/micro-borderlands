@@ -143,7 +143,10 @@ function completeTutorial() {
   spawnParticles(400, 225, '#ffcc00', 100, 8, 80);
   gCanvas.onmousedown = null;
   if (animId) cancelAnimationFrame(animId);
-  setTimeout(() => { startSanctuary(); }, 1500);
+  setTimeout(() => {
+    startSanctuary();
+    setTimeout(() => window.initMobileIfNeeded(), 150);
+  }, 1500);
 }
 
 // ── Main tutorial loop ────────────────────
