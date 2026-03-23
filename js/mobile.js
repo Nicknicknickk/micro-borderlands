@@ -77,6 +77,8 @@ window.initMobileIfNeeded = function () {
     sc.width  = window.innerWidth;
     sc.height = window.innerHeight;
   });
+  // Also update on orientation settle
+  window.addEventListener('resize', handleMobileResize);
 
   // Touch zones — left and right halves, full height
   ['mob-lz','mob-rz'].forEach((id, i) => {
@@ -337,10 +339,28 @@ window.checkMobileOrientation = function () {
   w.style.display = window.innerWidth > window.innerHeight ? 'none' : 'flex';
 };
 window.addEventListener('resize', window.checkMobileOrientation);
+
+// Debounced resize handler — rebuilds overlay after viewport settles
+let _mobileResizeTimer = null;
+function handleMobileResize() {
+  if (!mobileMode) return;
+  clearTimeout(_mobileResizeTimer);
+  _mobileResizeTimer = setTimeout(() => {
+    window.checkMobileOrientation();
+    window.initMobileIfNeeded();
+  }, 500);
+}
+
+window.addEventListener('resize', handleMobileResize);
+
 window.addEventListener('orientationchange', () => {
   window.checkMobileOrientation();
-  // Rebuild overlay after rotation settles
-  if (mobileMode) setTimeout(() => window.initMobileIfNeeded(), 300);
+  if (!mobileMode) return;
+  // iOS needs ~800ms to finish viewport resize after rotation
+  setTimeout(() => {
+    window.checkMobileOrientation();
+    window.initMobileIfNeeded();
+  }, 800);
 });
 
 // ── Init ──────────────────────────────────
