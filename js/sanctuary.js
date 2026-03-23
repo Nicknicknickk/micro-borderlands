@@ -1,7 +1,7 @@
 /* ==========================================
-   SANCTUARY.JS — The hub world loop v2.1
-   Patched: Marcus NPC, Zed shield shop,
-   marcusShopOpen guard
+   SANCTUARY.JS — The hub world loop v2.2
+   Visual polish: nameplates, proximity glow,
+   redesigned HUD, day/night sky tint
    ========================================== */
 
 function startSanctuary() {
@@ -10,14 +10,12 @@ function startSanctuary() {
   inSanctuary = true; inVehicle = false;
   lhParticles = []; slotsSpinTimer = 0; dayNightTimer = 0;
 
-  // ── Refresh Marcus's shop stock each run ──
   refreshMarcusShop();
 
   const charClass = localStorage.getItem('borderClass') || 'zero';
   lhPlayer = buildPlayer(charClass);
   lhPlayer.x = 400; lhPlayer.y = 225;
 
-  // Apply saved shield type to player stats
   if (typeof equippedShield !== 'undefined' && equippedShield) {
     applyShieldToPlayer(equippedShield);
   }
@@ -27,7 +25,6 @@ function startSanctuary() {
   lhDmgText = []; lhGrenades = []; lhAllies = [];
   inDialog = false; dialogStep = 0;
 
-  // ── Start sanctuary music ────────────────
   window.setMusicState('sanctuary');
 
   gCanvas.onmousemove = (e) => {
@@ -54,22 +51,208 @@ function startSanctuary() {
   loopSanctuary();
 }
 
+// ── NPC accent colors for nameplates ───────
+const NPC_COLORS = {
+  'Claptrap':     '#ffcc00',
+  'Dr. Zed':      '#ff3333',
+  'Quick Change': '#00ffff',
+  'Portal':       '#00ffff',
+  'Raid Portal':  '#cc44ff',
+  'Mayhem':       '#ff0000',
+  'Slots':        '#ffcc00',
+  'Moxxi':        '#ff007f',
+  'Bank':         '#00ffcc',
+  'Bounty Board': '#ffff00',
+  'Lilith':       '#ff4500',
+  'Catch-A-Ride': '#ff6600',
+  'Marcus':       '#ffcc00',
+  'Badass Ranks': '#ff00aa',
+  'Skill Tree':   '#00ff88',
+};
+
+// ── Draw styled nameplate under NPC ────────
+function drawNameplate(n, isNear) {
+  const color = NPC_COLORS[n.name] || '#ffffff';
+  const pw = 90, ph = 18;
+  const px = n.x - pw / 2;
+  const py = n.y + 30;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.beginPath();
+  ctx.roundRect(px, py, pw, ph, 3);
+  ctx.fill();
+
+  // Colored top border
+  ctx.fillStyle = color;
+  ctx.fillRect(px, py, pw, 2);
+
+  // Name text
+  ctx.fillStyle = isNear ? color : '#aaaaaa';
+  ctx.font = `bold ${isNear ? 10 : 9}px "Courier New"`;
+  ctx.textAlign = 'center';
+  ctx.fillText(n.name.toUpperCase(), n.x, py + 13);
+
+  // [E] hint when near
+  if (isNear) {
+    ctx.fillStyle = color;
+    ctx.font = 'bold 8px Arial';
+    ctx.fillText('[E]', n.x, py + ph + 10);
+  }
+  ctx.restore();
+}
+
+// ── Draw proximity glow ring ───────────────
+function drawProximityGlow(n) {
+  const color  = NPC_COLORS[n.name] || '#ffffff';
+  const pulse  = 0.4 + Math.sin(Date.now() / 300) * 0.3;
+  const radius = 34 + Math.sin(Date.now() / 400) * 4;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.globalAlpha = pulse;
+  ctx.stroke();
+
+  const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, radius);
+  grad.addColorStop(0, color + '22');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.globalAlpha = pulse * 0.5;
+  ctx.fill();
+
+  ctx.globalAlpha = 1.0;
+  ctx.restore();
+}
+
+// ── Day/night sky tint ─────────────────────
+function drawDayNightTint() {
+  const t     = (dayNightTimer % DAY_LENGTH) / DAY_LENGTH;
+  const sunH  = Math.sin(t * Math.PI * 2);
+
+  let r, g, b, alpha;
+  if (sunH > 0.5) {
+    r=255; g=200; b=100; alpha=0.04;
+  } else if (sunH > 0) {
+    const f=sunH/0.5; r=255; g=Math.floor(120+f*80); b=50; alpha=0.10-f*0.06;
+  } else if (sunH > -0.3) {
+    const f=(-sunH)/0.3; r=255; g=Math.floor(80-f*60); b=Math.floor(f*100); alpha=0.12+f*0.05;
+  } else {
+    const f=Math.min(1,(-sunH-0.3)/0.4); r=20; g=30; b=Math.floor(80+f*60); alpha=0.15+f*0.1;
+  }
+
+  ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+  ctx.fillRect(0, 0, 800, 450);
+
+  // Stars at night
+  if (sunH < -0.2) {
+    const starAlpha = Math.min(0.6, (-sunH - 0.2) * 2);
+    const stars = [
+      [50,30],[150,20],[250,40],[380,15],[470,35],[560,25],[650,10],[730,40],
+      [80,60],[200,55],[340,70],[500,50],[620,65],[760,55],[120,80],[420,75]
+    ];
+    stars.forEach(([sx,sy]) => {
+      ctx.globalAlpha = starAlpha * (0.5 + Math.sin(Date.now()/800+sx)*0.5) * 0.7;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(sx, sy, 2, 2);
+    });
+    ctx.globalAlpha = 1.0;
+  }
+}
+
+// ── Redesigned HUD bar ─────────────────────
+function drawSanctuaryHUD() {
+  const barH = 42, barY = 450 - barH;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.88)';
+  ctx.fillRect(0, barY, 800, barH);
+
+  // Orange top accent
+  ctx.fillStyle = '#ffa500';
+  ctx.fillRect(0, barY, 800, 2);
+
+  // EXP bar just below accent
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(0, barY + 2, 800, 4);
+  ctx.fillStyle = '#00ffff';
+  ctx.fillRect(0, barY + 2, (pExp / getExpRequired(pLevel)) * 800, 4);
+
+  // ── Credits ──
+  ctx.fillStyle = '#ffcc00';
+  ctx.font = 'bold 13px "Courier New"';
+  ctx.textAlign = 'left';
+  ctx.fillText(`$${playerCoins.toLocaleString()}`, 10, barY + 21);
+  ctx.fillStyle = '#555';
+  ctx.font = '9px Arial';
+  ctx.fillText('CREDITS', 10, barY + 33);
+
+  ctx.fillStyle = '#2a2a2a'; ctx.fillRect(108, barY+8, 1, barH-16);
+
+  // ── Level ──
+  ctx.fillStyle = '#00ffff';
+  ctx.font = 'bold 13px "Courier New"';
+  ctx.fillText(`LV ${pLevel}`, 118, barY + 21);
+  ctx.fillStyle = '#555';
+  ctx.font = '9px Arial';
+  ctx.fillText(`${pExp}/${getExpRequired(pLevel)} XP`, 118, barY + 33);
+
+  ctx.fillStyle = '#2a2a2a'; ctx.fillRect(215, barY+8, 1, barH-16);
+
+  // ── Gun ──
+  const gunColor = lhPlayer.gun.c || '#fff';
+  ctx.fillStyle = gunColor;
+  ctx.font = 'bold 11px "Courier New"';
+  const gunLabel = lhPlayer.gun.name.length > 20
+    ? lhPlayer.gun.name.substring(0, 19) + '…'
+    : lhPlayer.gun.name;
+  ctx.fillText(gunLabel, 225, barY + 20);
+  ctx.fillStyle = '#555';
+  ctx.font = '9px Arial';
+  ctx.fillText(`${lhPlayer.gun.wType || 'Pistol'} | DMG ${Math.floor(lhPlayer.gun.dmg)} | FR ${lhPlayer.gun.fr}`, 225, barY + 33);
+
+  ctx.fillStyle = '#2a2a2a'; ctx.fillRect(500, barY+8, 1, barH-16);
+
+  // ── Shield ──
+  const shdName  = (typeof equippedShield !== 'undefined' && equippedShield) ? equippedShield.name : `Shield Lv${shieldLvl}`;
+  const shdColor = (typeof equippedShield !== 'undefined' && equippedShield) ? equippedShield.color : '#00aaff';
+  ctx.fillStyle = shdColor;
+  ctx.font = 'bold 11px "Courier New"';
+  const shdLabel = shdName.length > 16 ? shdName.substring(0,15)+'…' : shdName;
+  ctx.fillText(shdLabel, 510, barY + 20);
+  ctx.fillStyle = '#555';
+  ctx.font = '9px Arial';
+  ctx.fillText(`${Math.floor(lhPlayer.shield)} / ${Math.floor(lhPlayer.maxShield)}`, 510, barY + 33);
+
+  ctx.fillStyle = '#2a2a2a'; ctx.fillRect(660, barY+8, 1, barH-16);
+
+  // ── Tokens ──
+  ctx.fillStyle = '#ff6a00';
+  ctx.font = 'bold 13px "Courier New"';
+  ctx.fillText(`${badassTokens} TKN`, 670, barY + 21);
+  ctx.fillStyle = '#555';
+  ctx.font = '9px Arial';
+  ctx.fillText('BADASS', 670, barY + 33);
+
+  ctx.textAlign = 'left';
+}
+
 // ─────────────────────────────────────────────────────────
 function loopSanctuary() {
-  // ── Guard: pause loop when any overlay is open ──────────
   if (!inSanctuary || isBossMode || inBank || inBadass || inInventory || inSkills || marcusShopOpen) return;
-  // Also check Zed screen
   const zedOpen = document.getElementById('zed-screen') &&
                   document.getElementById('zed-screen').style.display === 'flex';
   if (zedOpen) return;
 
   ctx.clearRect(0, 0, gCanvas.width, gCanvas.height);
+  dayNightTimer++;
 
   // ── Player movement ──────────────────────
   if (!inDialog) {
     const spd = 4;
     if (keys['KeyW'] || keys['ArrowUp'])    lhPlayer.y = Math.max(20,  lhPlayer.y - spd);
-    if (keys['KeyS'] || keys['ArrowDown'])  lhPlayer.y = Math.min(430, lhPlayer.y + spd);
+    if (keys['KeyS'] || keys['ArrowDown'])  lhPlayer.y = Math.min(400, lhPlayer.y + spd);
     if (keys['KeyA'] || keys['ArrowLeft'])  lhPlayer.x = Math.max(20,  lhPlayer.x - spd);
     if (keys['KeyD'] || keys['ArrowRight']) lhPlayer.x = Math.min(780, lhPlayer.x + spd);
   }
@@ -85,102 +268,144 @@ function loopSanctuary() {
     ctx.globalAlpha = 1.0;
   }
 
+  // ── Day/night tint ───────────────────────
+  drawDayNightTint();
+
   // ── Run counter watermark ────────────────
-  ctx.fillStyle = 'rgba(255,255,255,0.1)';
-  ctx.font = 'bold 60px Arial'; ctx.textAlign = 'center';
-  ctx.fillText(`CURRENT RUN: ${runCount + 1}`, 400, 240);
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.font = 'bold 55px Arial'; ctx.textAlign = 'center';
+  ctx.fillText(`RUN ${runCount + 1}`, 400, 240);
   ctx.textAlign = 'left';
 
   // ── NPC message builders ─────────────────
   let lilithMsg = fireLvl < 33
-    ? `Press E: Buy Fire Lv${fireLvl+1} (200c)`
-    : shockLvl < 33
-      ? `Press E: Buy Shock Lv${shockLvl+1} (200c)`
-      : acidLvl < 33
-        ? `Press E: Buy Acid Lv${acidLvl+1} (200c)`
-        : 'Lilith: You are fully maxed out, Killer!';
+    ? `Buy Fire Lv${fireLvl+1} — $200`
+    : shockLvl < 33 ? `Buy Shock Lv${shockLvl+1} — $200`
+    : acidLvl < 33  ? `Buy Acid Lv${acidLvl+1} — $200`
+    : 'All elements maxed out!';
 
-  let bountyMsg = '';
-  if      (activeQuest === 0)                        bountyMsg = 'Press E: Accept Bounty';
-  else if (activeQuest === 1 && questProgress < 25)  bountyMsg = `Kill Psychos (${questProgress}/25)`;
-  else if (activeQuest === 1 && questProgress >= 25) bountyMsg = 'Press E: Claim Loot';
-  else if (activeQuest === 2 && questProgress < 10)  bountyMsg = `Destroy Loaders (${questProgress}/10)`;
-  else if (activeQuest === 2 && questProgress >= 10) bountyMsg = 'Press E: Claim Tokens';
+  let bountyMsg = activeQuest===0 ? 'Accept a Bounty Contract'
+    : activeQuest===1&&questProgress<25  ? `Kill Psychos (${questProgress}/25)`
+    : activeQuest===1&&questProgress>=25 ? 'Claim your reward!'
+    : activeQuest===2&&questProgress<10  ? `Destroy Loaders (${questProgress}/10)`
+    : 'Claim your tokens!';
 
   // ── NPC definitions ───────────────────────
-  // Marcus is at x:600, y:350 (between Catch-A-Ride and Badass Ranks)
   const npcs = [
-    { name: 'Claptrap',      x: 100, y: 100, img: clapImg,        fallback: '🤖',     msg: 'Press E: Buy Legendary (5000c)' },
-    { name: 'Dr. Zed',       x: 200, y: 100, img: zedImg,         fallback: 'Zed',    msg: 'Press E: Zed\'s Shield Shop | Q: Grenades 50c' },
-    { name: 'Quick Change',  x: 300, y: 100, img: quickChangeImg,  fallback: '🪞',     msg: 'Press E: Change Class' },
-    { name: 'Portal',        x: 400, y: 80,  img: null,            fallback: 'Portal', msg: `[E] Enter: ${mapData[activeMapIndex].name} | [Q] Change Map` },
-    { name: 'Raid Portal',   x: 500, y: 100, img: null,            fallback: '🟣',     msg: 'Press E: Enter Raid Boss (2000c)' },
-    { name: 'Mayhem',        x: 600, y: 100, img: mayhemImg,       fallback: '💀',     msg: mayhemMode===50?'E: Disable Mayhem':mayhemMode===20?'E: Mayhem 50 (2500x HP)':mayhemMode===10?'E: Mayhem 20 (500x HP)':'E: Mayhem 10 (25x HP)' },
-    { name: 'Slots',         x: 700, y: 80,  img: slotsImg,        fallback: 'Slots',  msg: 'Press E: Spin (200c)' },
-    { name: 'Moxxi',         x: 700, y: 150, img: moxxiImg,        fallback: '💋',     msg: 'E: Tip 100c | C: Duel | Click: Chat' },
-    { name: 'Bank',          x: 100, y: 350, img: bankImg,         fallback: 'Bank',   msg: 'Press E: Open Vault' },
-    { name: 'Bounty Board',  x: 200, y: 350, img: bountyImg,       fallback: '📋',     msg: bountyMsg },
-    { name: 'Lilith',        x: 300, y: 350, img: lilithImg,       fallback: '🔥',     msg: lilithMsg + ' | C: Duel' },
-    { name: 'Catch-A-Ride',  x: 500, y: 350, img: catchARideImg,   fallback: 'vehicle',msg: hasVehicle?'Vehicle Unlocked! Press V in Combat':'Press E: Buy Runner (2000c)' },
-    { name: 'Marcus',        x: 600, y: 350, img: null,            fallback: '🎩',     msg: 'Press E: Marcus\'s Munitions — Buy & Sell Guns' },
-    { name: 'Badass Ranks',  x: 700, y: 350, img: badassImg,       fallback: 'Badass', msg: `Press E: Spend Tokens (${badassTokens})` },
-    { name: 'Skill Tree',    x: 400, y: 350, img: null,            fallback: '🧬',     msg: 'Press E: Upgrade Skills' }
+    { name:'Claptrap',     x:100, y:100, img:clapImg,       fallback:'🤖',      msg:'Buy a Legendary weapon — $5,000' },
+    { name:'Dr. Zed',      x:200, y:100, img:zedImg,        fallback:'Zed',     msg:'Shield Shop  |  Q: Refill Grenades $50' },
+    { name:'Quick Change', x:300, y:100, img:quickChangeImg, fallback:'🪞',      msg:'Change your Vault Hunter class' },
+    { name:'Portal',       x:400, y:80,  img:null,           fallback:'Portal',  msg:`Enter ${mapData[activeMapIndex].name}  |  Q: Switch Map` },
+    { name:'Raid Portal',  x:500, y:100, img:null,           fallback:'🟣',      msg:'Enter Raid Boss encounter — $2,000' },
+    { name:'Mayhem',       x:600, y:100, img:mayhemImg,      fallback:'💀',      msg:mayhemMode===50?'Disable Mayhem':mayhemMode===20?'→ Mayhem 50':mayhemMode===10?'→ Mayhem 20':'Enable Mayhem 10' },
+    { name:'Slots',        x:700, y:80,  img:slotsImg,       fallback:'Slots',   msg:'Spin the slot machine — $200' },
+    { name:'Moxxi',        x:700, y:150, img:moxxiImg,       fallback:'💋',      msg:'Tip $100  |  C: Duel  |  Click: Chat' },
+    { name:'Bank',         x:100, y:350, img:bankImg,        fallback:'Bank',    msg:'Open the Sanctuary Vault' },
+    { name:'Bounty Board', x:200, y:350, img:bountyImg,      fallback:'📋',      msg:bountyMsg },
+    { name:'Lilith',       x:300, y:350, img:lilithImg,      fallback:'🔥',      msg:lilithMsg },
+    { name:'Catch-A-Ride', x:500, y:350, img:catchARideImg,  fallback:'vehicle', msg:hasVehicle?'Vehicle ready — press V in Combat':'Buy Runner vehicle — $2,000' },
+    { name:'Marcus',       x:600, y:350, img:null,           fallback:'🎩',      msg:"Marcus's Munitions — Buy & Sell guns" },
+    { name:'Badass Ranks', x:700, y:350, img:badassImg,      fallback:'Badass',  msg:`Spend Badass Tokens (${badassTokens} available)` },
+    { name:'Skill Tree',   x:400, y:350, img:null,           fallback:'🧬',      msg:'Upgrade your Skill Tree' },
   ];
 
-  // ── Draw NPCs ────────────────────────────
+  // ── Detect nearest NPC first ─────────────
   nearNPC = null;
   npcs.forEach(n => {
+    if (Math.hypot(lhPlayer.x - n.x, lhPlayer.y - n.y) < 50) nearNPC = n;
+  });
+
+  // ── Draw NPCs ────────────────────────────
+  npcs.forEach(n => {
+    const isNear = nearNPC && nearNPC.name === n.name;
+
+    // Glow behind sprite
+    if (isNear) drawProximityGlow(n);
+
+    // Sprite / fallback icon
     if (n.img && n.img.src !== '' && n.img.complete && n.img.naturalHeight !== 0) {
       ctx.drawImage(n.img, n.x - 25, n.y - 25, 50, 50);
+
     } else if (n.name === 'Portal') {
-      ctx.fillStyle = '#0ff'; ctx.beginPath(); ctx.arc(n.x, n.y, 25, 0, Math.PI*2); ctx.fill();
+      const pr = 25 + Math.sin(Date.now() / 400) * 3;
+      ctx.save();
+      ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 3;
+      ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 14;
+      ctx.beginPath(); ctx.arc(n.x, n.y, pr, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,255,255,0.12)';
+      ctx.beginPath(); ctx.arc(n.x, n.y, pr, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+
     } else if (n.name === 'Raid Portal') {
-      ctx.fillStyle = '#a020f0'; ctx.beginPath(); ctx.arc(n.x, n.y, 25, 0, Math.PI*2); ctx.fill();
+      const pr = 25 + Math.sin(Date.now() / 350) * 3;
+      ctx.save();
+      ctx.strokeStyle = '#cc44ff'; ctx.lineWidth = 3;
+      ctx.shadowColor = '#cc44ff'; ctx.shadowBlur = 14;
+      ctx.beginPath(); ctx.arc(n.x, n.y, pr, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = 'rgba(180,0,255,0.12)';
+      ctx.beginPath(); ctx.arc(n.x, n.y, pr, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+
     } else if (n.name === 'Marcus') {
-      // Draw Marcus as a top-hat + coat silhouette
       ctx.fillStyle = '#8b4513';
-      ctx.beginPath(); ctx.arc(n.x, n.y - 8, 14, 0, Math.PI * 2); ctx.fill(); // head
-      ctx.fillStyle = '#222';
-      ctx.fillRect(n.x - 18, n.y - 22, 36, 12); // hat brim
-      ctx.fillRect(n.x - 12, n.y - 38, 24, 18); // hat top
+      ctx.beginPath(); ctx.arc(n.x, n.y - 8, 14, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#111';
+      ctx.fillRect(n.x-18, n.y-22, 36, 12);
+      ctx.fillRect(n.x-12, n.y-38, 24, 18);
       ctx.fillStyle = '#8b0000';
-      ctx.fillRect(n.x - 16, n.y + 6, 32, 20);  // coat
-      ctx.fillStyle = '#ffcc00';
-      ctx.font = '10px Arial'; ctx.textAlign = 'center';
-      ctx.fillText('🎩', n.x, n.y + 5);
-    } else if (n.name === 'Bounty Board' || n.name === 'Quick Change') {
-      ctx.fillStyle = '#ffff00'; ctx.font = '30px Arial'; ctx.textAlign = 'center'; ctx.fillText(n.fallback, n.x, n.y + 10);
-    } else if (n.name === 'Skill Tree') {
-      ctx.fillStyle = '#0f0'; ctx.font = '30px Arial'; ctx.textAlign = 'center'; ctx.fillText(n.fallback, n.x, n.y + 10);
-    } else if (n.name === 'Mayhem') {
-      ctx.fillStyle = '#ff0000'; ctx.font = '30px Arial'; ctx.textAlign = 'center'; ctx.fillText('💀', n.x, n.y + 10);
+      ctx.fillRect(n.x-16, n.y+6, 32, 20);
+
+    } else if (n.name === 'Bounty Board' || n.name === 'Quick Change' || n.name === 'Skill Tree' || n.name === 'Mayhem') {
+      ctx.font = '30px Arial'; ctx.textAlign = 'center';
+      ctx.fillText(n.fallback, n.x, n.y + 10);
+
     } else {
       drawPixelSprite(ctx, n.fallback, n.x, n.y, 45);
     }
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(n.name, n.x, n.y - 30); ctx.textAlign = 'left';
-    if (Math.hypot(lhPlayer.x - n.x, lhPlayer.y - n.y) < 50) nearNPC = n;
+    ctx.textAlign = 'left';
+
+    // Nameplate below sprite
+    drawNameplate(n, isNear);
   });
+
+  // ── Interact prompt bubble above NPC ─────
+  if (nearNPC && !inDialog) {
+    const n     = nearNPC;
+    const color = NPC_COLORS[n.name] || '#ffcc00';
+    const msgW  = Math.min(380, n.msg.length * 6.8 + 24);
+    const msgX  = Math.max(8, Math.min(792 - msgW, n.x - msgW / 2));
+    const msgY  = n.y - 72;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.beginPath(); ctx.roundRect(msgX, msgY, msgW, 26, 4); ctx.fill();
+    ctx.fillStyle = color;
+    ctx.fillRect(msgX, msgY, msgW, 2);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px "Courier New"';
+    ctx.textAlign = 'center';
+    ctx.fillText(n.msg, msgX + msgW / 2, msgY + 17);
+    ctx.restore();
+  }
 
   // ── Slots spin animation ─────────────────
   if (slotsSpinTimer > 0) {
     slotsSpinTimer--;
     const symbols = ['🍒','🔔','💎','7️⃣','💀'];
-    let s1 = symbols[Math.floor(Math.random()*symbols.length)];
-    let s2 = symbols[Math.floor(Math.random()*symbols.length)];
-    let s3 = symbols[Math.floor(Math.random()*symbols.length)];
+    let s1=symbols[Math.floor(Math.random()*symbols.length)];
+    let s2=symbols[Math.floor(Math.random()*symbols.length)];
+    let s3=symbols[Math.floor(Math.random()*symbols.length)];
     if (slotsSpinTimer === 0) {
       s1='7️⃣'; s2='7️⃣'; s3='7️⃣';
       playSound('coin'); playSound('coin');
-      lhDmgText.push({ x:700, y:20, txt:'JACKPOT!', life:60, c:'#ffcc00' });
+      lhDmgText.push({x:700,y:20,txt:'JACKPOT!',life:60,c:'#ffcc00'});
       genLoot(700, 120, false, false, true);
       unlockAchievement('jackpot');
     }
     ctx.fillStyle='rgba(0,0,0,0.9)'; ctx.fillRect(670,10,60,30);
     ctx.strokeStyle='#ffcc00'; ctx.lineWidth=2; ctx.strokeRect(670,10,60,30);
     ctx.font='18px Arial'; ctx.textAlign='center';
-    ctx.fillText(`${s1}${s2}${s3}`,700,30);
-    ctx.textAlign='left';
+    ctx.fillText(`${s1}${s2}${s3}`,700,30); ctx.textAlign='left';
   }
 
   // ── [E] key ───────────────────────────────
@@ -189,24 +414,20 @@ function loopSanctuary() {
     if (!nearNPC) return;
     const n = nearNPC;
 
-    if (n.name === 'Portal') {
-      inSanctuary = false;
-      localStorage.setItem('borderRuns', ++runCount);
-      localStorage.setItem('borderCoins', playerCoins);
-      startLooter();
+    if (n.name==='Portal') {
+      inSanctuary=false; localStorage.setItem('borderRuns',++runCount);
+      localStorage.setItem('borderCoins',playerCoins); startLooter();
 
-    } else if (n.name === 'Raid Portal') {
-      if (playerCoins >= 2000) {
-        playerCoins -= 2000; localStorage.setItem('borderCoins', playerCoins);
-        inSanctuary = false;
-        localStorage.setItem('borderRuns', ++runCount);
-        startLooter(true);
+    } else if (n.name==='Raid Portal') {
+      if (playerCoins>=2000) {
+        playerCoins-=2000; localStorage.setItem('borderCoins',playerCoins);
+        inSanctuary=false; localStorage.setItem('borderRuns',++runCount); startLooter(true);
       } else { playSound('hit'); }
 
-    } else if (n.name === 'Bounty Board') {
-      if (activeQuest === 0) {
-        activeQuest = 1; questProgress = 0;
-        localStorage.setItem('borderQuest', activeQuest); localStorage.setItem('borderQProg', questProgress);
+    } else if (n.name==='Bounty Board') {
+      if (activeQuest===0) {
+        activeQuest=1; questProgress=0;
+        localStorage.setItem('borderQuest',activeQuest); localStorage.setItem('borderQProg',questProgress);
         playSound('ability'); lhDmgText.push({x:n.x,y:n.y-40,txt:'BOUNTY ACCEPTED!',life:40,c:'#ff0'});
       } else if ((activeQuest===1&&questProgress>=25)||(activeQuest===2&&questProgress>=10)) {
         if (activeQuest===1) {
@@ -224,23 +445,17 @@ function loopSanctuary() {
     } else if (n.name==='Bank')         { window.openBank();
     } else if (n.name==='Badass Ranks') { window.openBadass();
     } else if (n.name==='Skill Tree')   { window.openSkills();
+    } else if (n.name==='Marcus')       { window.openMarcus();
+    } else if (n.name==='Dr. Zed')      { window.openZed();
 
-    // ── Marcus — gun shop & sell ────────────
-    } else if (n.name === 'Marcus') {
-      window.openMarcus();
-
-    // ── Dr. Zed — shield shop (replaces old inline logic) ──
-    } else if (n.name === 'Dr. Zed') {
-      window.openZed();
-
-    } else if (n.name === 'Mayhem') {
+    } else if (n.name==='Mayhem') {
       if      (mayhemMode===0)  mayhemMode=10;
       else if (mayhemMode===10) mayhemMode=20;
       else if (mayhemMode===20) mayhemMode=50;
       else                      mayhemMode=0;
       localStorage.setItem('borderMayhem',mayhemMode);
       playSound('ability'); spawnParticles(n.x,n.y,'#ff0000',40,5,40);
-      lhDmgText.push({x:n.x,y:n.y-40,txt:mayhemMode===0?'MAYHEM OFF':`MAYHEM ${mayhemMode} ON!`,life:40,c:'#ff0000'});
+      lhDmgText.push({x:n.x,y:n.y-40,txt:mayhemMode===0?'MAYHEM OFF':`MAYHEM ${mayhemMode}!`,life:40,c:'#ff0000'});
       updateMenuStats();
 
     } else if (n.name==='Catch-A-Ride'&&!hasVehicle) {
@@ -302,12 +517,9 @@ function loopSanctuary() {
   }
 
   // ── [Q] key ───────────────────────────────
-  // NOTE: Zed grenade purchase is now inside the Zed shield shop UI.
-  // Q near Zed still works as a quick grenade refill shortcut.
   if (!inDialog && (keys['KeyQ'] || keys['q'])) {
     keys['KeyQ'] = false; keys['q'] = false;
     if (nearNPC && nearNPC.name==='Dr. Zed') {
-      // Quick grenade refill without opening the full shop
       if (playerCoins>=50&&lhPlayer.grenades<3) {
         playerCoins-=50; lhPlayer.grenades=3;
         localStorage.setItem('borderGrenades',3); localStorage.setItem('borderCoins',playerCoins);
@@ -318,7 +530,7 @@ function loopSanctuary() {
       let nextMap=(activeMapIndex+1)%mapData.length;
       while(mapData[nextMap].req>pLevel&&nextMap!==activeMapIndex) nextMap=(nextMap+1)%mapData.length;
       if(nextMap===activeMapIndex&&mapData.length>1) {
-        playSound('hit'); lhDmgText.push({x:nearNPC.x,y:nearNPC.y-40,txt:'LEVEL UP TO UNLOCK MORE!',life:40,c:'#f00'});
+        playSound('hit'); lhDmgText.push({x:nearNPC.x,y:nearNPC.y-40,txt:'LEVEL UP TO UNLOCK!',life:40,c:'#f00'});
       } else {
         activeMapIndex=nextMap; localStorage.setItem('borderMap',activeMapIndex);
         playSound('ability'); lhDmgText.push({x:nearNPC.x,y:nearNPC.y-40,txt:mapData[activeMapIndex].name,life:40,c:'#0ff'});
@@ -329,11 +541,8 @@ function loopSanctuary() {
   // ── [C] key — Duels ──────────────────────
   if (!inDialog && (keys['KeyC'] || keys['c'])) {
     keys['KeyC'] = false; keys['c'] = false;
-    if (nearNPC && nearNPC.name === 'Lilith') {
-      inSanctuary = false; startLooter(false, 'Lilith');
-    } else if (nearNPC && nearNPC.name === 'Moxxi') {
-      inSanctuary = false; startLooter(false, 'Moxxi');
-    }
+    if (nearNPC && nearNPC.name==='Lilith') { inSanctuary=false; startLooter(false,'Lilith'); }
+    else if (nearNPC && nearNPC.name==='Moxxi') { inSanctuary=false; startLooter(false,'Moxxi'); }
   }
 
   // ── Loot, damage text, particles ─────────
@@ -351,39 +560,24 @@ function loopSanctuary() {
 
   // ── Moxxi Dialog ─────────────────────────
   if (inDialog) {
-    ctx.fillStyle='rgba(0,0,0,0.9)'; ctx.fillRect(100,320,600,110);
-    ctx.strokeStyle='#ff007f'; ctx.lineWidth=3; ctx.strokeRect(100,320,600,110);
-    if(moxxiImg.complete&&moxxiImg.naturalHeight!==0){ctx.drawImage(moxxiImg,100,240,90,90);}
-    else{drawPixelSprite(ctx,'maya',145,285,50);}
-    ctx.fillStyle='#ff007f'; ctx.font='bold 18px Courier'; ctx.fillText('MAD MOXXI',200,345);
-    ctx.fillStyle='#fff'; ctx.font='16px Courier';
-    moxxiLines[dialogStep].split('\n').forEach((line,idx)=>ctx.fillText(line,120,375+idx*22));
+    ctx.fillStyle='rgba(0,0,0,0.9)'; ctx.fillRect(100,300,600,120);
+    ctx.strokeStyle='#ff007f'; ctx.lineWidth=3; ctx.strokeRect(100,300,600,120);
+    ctx.fillStyle='#ff007f'; ctx.fillRect(100,300,600,2);
+    if(moxxiImg.complete&&moxxiImg.naturalHeight!==0){ctx.drawImage(moxxiImg,105,230,80,80);}
+    else{drawPixelSprite(ctx,'maya',145,270,50);}
+    ctx.fillStyle='#ff007f'; ctx.font='bold 14px "Courier New"'; ctx.textAlign='left';
+    ctx.fillText('MAD MOXXI',195,320);
+    ctx.fillStyle='#fff'; ctx.font='13px "Courier New"';
+    moxxiLines[dialogStep].split('\n').forEach((line,idx)=>ctx.fillText(line,120,345+idx*20));
     if(dialogStep<moxxiLines.length-1){
-      ctx.fillStyle='#ffcc00'; ctx.font='12px Courier'; ctx.textAlign='right';
-      ctx.fillText('Click to continue...',690,420); ctx.textAlign='left';
+      ctx.fillStyle='#ff007f'; ctx.font='11px Courier'; ctx.textAlign='right';
+      ctx.fillText('[ CLICK TO CONTINUE ]',690,410); ctx.textAlign='left';
     }
   }
 
-  // ── HUD ───────────────────────────────────
-  ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(0,410,800,40);
-  ctx.fillStyle='#111'; ctx.fillRect(0,445,800,5);
-  ctx.fillStyle='#0ff'; ctx.fillRect(0,445,(pExp/getExpRequired(pLevel))*800,5);
-  ctx.fillStyle='#fff'; ctx.font='15px Courier New';
+  // ── Redesigned HUD ────────────────────────
+  drawSanctuaryHUD();
 
-  // Show equipped shield name in HUD
-  const shdName = (typeof equippedShield !== 'undefined' && equippedShield)
-    ? equippedShield.name
-    : `Shield Lv${shieldLvl}`;
-  ctx.fillText(
-    `Credits: $${playerCoins} | Tokens: ${badassTokens} | Gun: ${lhPlayer.gun.name} | Lv${pLevel} | ${shdName}`,
-    10, 435
-  );
-
-  if(nearNPC&&!inDialog){
-    ctx.fillStyle='#ffcc00'; ctx.font='bold 20px Arial'; ctx.textAlign='center';
-    ctx.fillText(nearNPC.msg,400,200); ctx.textAlign='left';
-  }
-
-  statusText.innerText='WASD: Move | E: Interact | Q: Alt/Grenades | C: Duel | F: Pick Up | I: Inventory | B: Vault';
+  statusText.innerText='WASD: Move | E: Interact | Q: Alt Action | C: Duel | F: Pick Up | I: Inventory | B: Vault';
   animId = requestAnimationFrame(loopSanctuary);
 }
