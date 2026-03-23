@@ -14,7 +14,9 @@ body {
   background-color: var(--bg-color);
   color: var(--text-color);
   font-family: 'Courier New', Courier, monospace;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   min-height: 100vh;
   user-select: none;
   overflow-x: hidden;
@@ -25,6 +27,7 @@ body {
    ========================================== */
 
 #main-menu {
+  width: 100%;
   /* Styles handled by landing page inline CSS in index.html */
 }
 
@@ -91,13 +94,13 @@ button:hover {
   display: none;
   flex-direction: column;
   align-items: center;
-  margin: 5px auto 0;
   width: 100%;
   max-width: 900px;
-  /* Re-add centering since body is no longer flex */
-  position: relative;
-  left: 50%;
-  transform: translateX(-50%);
+  margin: 0 auto;
+  padding-top: 5px;
+  position: static;
+  left: auto;
+  transform: none;
 }
 
 canvas {
@@ -162,9 +165,12 @@ canvas {
   position: fixed;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 10000;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
   padding-top: 20px;
   border: 5px solid var(--text-color);
   box-sizing: border-box;
@@ -175,6 +181,14 @@ canvas {
 #inv-screen {
   padding: 0 !important;
   align-items: stretch !important;
+}
+
+/* Marcus and Zed scroll from top */
+#marcus-screen,
+#zed-screen {
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 20px;
 }
 
 .bank-item {
