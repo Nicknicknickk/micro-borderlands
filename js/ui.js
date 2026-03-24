@@ -6,16 +6,8 @@
 window.launchGame = function () {
   mainMenu.style.display      = 'none';
   gameContainer.style.display = 'flex';
-  window.checkMobileOrientation();
-  if (shouldRunTutorial()) {
-    startTutorial();
-    // Don't init mobile during tutorial — overlay built when tutorial completes
-  } else {
-    // Always go to sanctuary first — even on run 0
-    // startLooter is only called from sanctuary portal
-    startSanctuary();
-    setTimeout(() => window.initMobileIfNeeded(), 200);
-  }
+  if (shouldRunTutorial()) startTutorial();
+  else startSanctuary();
 };
 
 

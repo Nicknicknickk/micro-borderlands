@@ -1,4 +1,4 @@
-/* ==========================================
+        /* ==========================================
    TUTORIAL.JS — Claptrap Intro Scene
    Triggers only on first ever launch
    ========================================== */
@@ -105,7 +105,6 @@ function startTutorial() {
   };
 
   gCanvas.onmouseup = null;
-  setTimeout(() => window.initMobileIfNeeded(), 100);
   loopTutorial();
 }
 
@@ -144,10 +143,7 @@ function completeTutorial() {
   spawnParticles(400, 225, '#ffcc00', 100, 8, 80);
   gCanvas.onmousedown = null;
   if (animId) cancelAnimationFrame(animId);
-  setTimeout(() => {
-    startSanctuary();
-    setTimeout(() => window.initMobileIfNeeded(), 150);
-  }, 1500);
+  setTimeout(() => { startSanctuary(); }, 1500);
 }
 
 // ── Main tutorial loop ────────────────────
