@@ -115,7 +115,7 @@ function genLoot(x, y, forcedLegendary = false, isMoxxi = false, isCasino = fals
     x, y,
     isMod: false,
     gun: { name: finalName, c: colors[rarity], dmg, fr, spd, rarity, wType, timer: 0 },
-    life: (forcedLegendary || isMoxxi || isCasino || isBossDrop) ? 9999 : 1800
+    life: (forcedLegendary || isMoxxi || isCasino) ? 9999 : 1800
   });
   if(rarity >= 4) { unlockAchievement('legendary'); }
 }
@@ -135,6 +135,32 @@ function updateAndDrawLoot(isInSanctuary = false) {
     ctx.shadowBlur = 10;
     ctx.fillRect(l.x - 5, l.y - 5, 10, 10);
     ctx.shadowBlur = 0;
+
+    // ── Loot beam for rare+ drops ──────────
+    const lRarity = l.isMod ? 2 : (l.gun.rarity || 0);
+    if (lRarity >= 3) {
+      const pulse   = Math.sin(Date.now() / 400 + l.x) * 0.3 + 0.7;
+      const beamH   = lRarity >= 4 ? 600 : 300;
+      const beamW   = lRarity >= 5 ? 8 : lRarity >= 4 ? 5 : 3;
+      const grad    = ctx.createLinearGradient(l.x, l.y - beamH, l.x, l.y);
+      grad.addColorStop(0,   `rgba(0,0,0,0)`);
+      grad.addColorStop(0.4, `rgba(0,0,0,0)`);
+      grad.addColorStop(1,   lColor);
+      ctx.globalAlpha = pulse * (lRarity >= 4 ? 0.85 : 0.5);
+      ctx.fillStyle   = grad;
+      ctx.fillRect(l.x - beamW / 2, l.y - beamH, beamW, beamH);
+      // Halo ring at base
+      ctx.beginPath();
+      ctx.arc(l.x, l.y, 14 + Math.sin(Date.now() / 250) * 3, 0, Math.PI * 2);
+      ctx.strokeStyle = lColor;
+      ctx.lineWidth   = lRarity >= 4 ? 2.5 : 1.5;
+      ctx.shadowColor = lColor;
+      ctx.shadowBlur  = lRarity >= 4 ? 18 : 8;
+      ctx.stroke();
+      ctx.shadowBlur  = 0;
+      ctx.globalAlpha = 1.0;
+    }
+
     ctx.fillStyle  = '#fff';
     ctx.font       = 'bold 12px Arial';
     const lName    = l.isMod ? `[${l.type}] ${l.name}` : l.gun.name;
