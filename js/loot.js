@@ -135,24 +135,6 @@ function updateAndDrawLoot(isInSanctuary = false) {
     ctx.shadowBlur = 10;
     ctx.fillRect(l.x - 5, l.y - 5, 10, 10);
     ctx.shadowBlur = 0;
-
-    // ── Loot beam — only for rare+ AND only when on screen ─
-    const lRarity = l.isMod ? 2 : (l.gun.rarity || 0);
-    if (lRarity >= 3) {
-      // Cull: skip if loot is outside current camera view
-      const screenX = l.x - lhCam.x;
-      const screenY = l.y - lhCam.y;
-      if (screenX >= -10 && screenX <= 810 && screenY >= -520 && screenY <= 460) {
-        const pulse = 0.45 + 0.2 * ((Math.floor(Date.now() / 300) % 3) * 0.33);
-        const beamH = lRarity >= 4 ? 480 : 240;
-        const beamW = lRarity >= 4 ? 3 : 2;
-        ctx.globalAlpha = pulse;
-        ctx.fillStyle   = lColor;
-        ctx.fillRect(screenX - beamW / 2, screenY - beamH, beamW, beamH);
-        ctx.globalAlpha = 1.0;
-      }
-    }
-
     ctx.fillStyle  = '#fff';
     ctx.font       = 'bold 12px Arial';
     const lName    = l.isMod ? `[${l.type}] ${l.name}` : l.gun.name;
