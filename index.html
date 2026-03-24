@@ -378,6 +378,24 @@
   <!-- DR. ZED SHIELD SHOP — replaces the old inline Zed logic -->
   <div id="zed-screen" class="overlay-screen"></div>
 
+  <!-- TROPHY ROOM — HTML overlay for scrollable achievement list -->
+  <div id="ach-screen" class="overlay-screen" style="display:none;padding:0;align-items:stretch;">
+    <div style="width:100%;max-width:860px;margin:0 auto;padding:24px 20px 40px;box-sizing:border-box;">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;border-bottom:2px solid #ffd700;padding-bottom:14px;">
+        <div style="font-size:2.5rem;">🏆</div>
+        <div>
+          <div style="color:#ffd700;font-size:1.5rem;font-weight:bold;font-family:'Bebas Neue',monospace;letter-spacing:2px;">TROPHY ROOM</div>
+          <div id="ach-progress-text" style="color:#aaa;font-size:0.85rem;font-family:'Courier New',monospace;"></div>
+        </div>
+        <button onclick="window.closeAchievements()" style="margin-left:auto;background:transparent;color:#888;border:2px solid #555;padding:8px 18px;font-size:1rem;cursor:pointer;font-family:inherit;width:auto;box-shadow:none;">✕ CLOSE</button>
+      </div>
+      <div style="background:#111;height:8px;border-radius:4px;margin-bottom:20px;overflow:hidden;">
+        <div id="ach-progress-bar" style="height:100%;background:linear-gradient(90deg,#b8860b,#ffd700);border-radius:4px;transition:width 0.4s;"></div>
+      </div>
+      <div id="ach-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div>
+    </div>
+  </div>
+
   <!-- ── MAIN MENU — Landing Page ── -->
   <div id="main-menu">
     <div class="menu-hero">
@@ -471,7 +489,17 @@
       <button onclick="window.goHome()" style="width:auto;padding:5px 15px;box-shadow:none;">← Menu</button>
       <button id="sound-toggle" onclick="window.toggleSound()" style="width:auto;padding:5px 15px;color:#ffcc00;border-color:#ffcc00;box-shadow:none;">🔇 Sound: OFF</button>
     </div>
-    <canvas id="game-canvas" width="800" height="450"></canvas>
+    <div style="display:flex;gap:8px;align-items:flex-start;width:100%;">
+      <canvas id="game-canvas" width="800" height="450" style="flex:1;min-width:0;"></canvas>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+        <canvas id="minimap-canvas" width="160" height="120"
+          style="border:2px solid #ffa500;box-shadow:0 0 12px rgba(255,165,0,0.4);background:#000;display:block;">
+        </canvas>
+        <div style="color:rgba(255,165,0,0.5);font-size:0.65rem;font-family:'Courier New',monospace;text-align:center;letter-spacing:0.05em;">
+          ● ENEMY &nbsp; ◆ BOSS &nbsp; ● EXIT
+        </div>
+      </div>
+    </div>
     <div id="status-text"></div>
   </div>
 
