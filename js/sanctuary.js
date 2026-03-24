@@ -304,7 +304,7 @@ function loopSanctuary() {
     { name:'Bounty Board', x:200, y:350, img:bountyImg,      fallback:'📋',      msg:bountyMsg },
     { name:'Lilith',       x:300, y:350, img:lilithImg,      fallback:'🔥',      msg:lilithMsg },
     { name:'Catch-A-Ride', x:500, y:350, img:catchARideImg,  fallback:'vehicle', msg:hasVehicle?'Vehicle ready — press V in Combat':'Buy Runner vehicle — $2,000' },
-    { name:'Marcus',       x:600, y:350, img:null,           fallback:'🎩',      msg:"Marcus's Munitions — Buy & Sell guns" },
+    { name:'Marcus',       x:600, y:350, img:marcusImg,      fallback:'🎩',      msg:"Marcus's Munitions — Buy & Sell guns" },
     { name:'Badass Ranks', x:700, y:350, img:badassImg,      fallback:'Badass',  msg:`Spend Badass Tokens (${badassTokens} available)` },
     { name:'Skill Tree',   x:400, y:350, img:null,           fallback:'🧬',      msg:'Upgrade your Skill Tree' },
   ];
