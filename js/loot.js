@@ -136,18 +136,21 @@ function updateAndDrawLoot(isInSanctuary = false) {
     ctx.fillRect(l.x - 5, l.y - 5, 10, 10);
     ctx.shadowBlur = 0;
 
-    // ── Loot beam for rare+ drops (lightweight) ─
+    // ── Loot beam — only for rare+ AND only when on screen ─
     const lRarity = l.isMod ? 2 : (l.gun.rarity || 0);
     if (lRarity >= 3) {
-      const t       = (Date.now() / 500) % (Math.PI * 2);
-      const pulse   = 0.55 + Math.sin(t + l.x * 0.01) * 0.2;
-      const beamH   = lRarity >= 4 ? 500 : 250;
-      const beamW   = lRarity >= 4 ? 4 : 2;
-      ctx.globalAlpha = pulse;
-      ctx.fillStyle   = lColor;
-      // Simple rect beam — no gradient, no arc, no shadow
-      ctx.fillRect(l.x - beamW / 2, l.y - beamH, beamW, beamH);
-      ctx.globalAlpha = 1.0;
+      // Cull: skip if loot is outside current camera view
+      const screenX = l.x - lhCam.x;
+      const screenY = l.y - lhCam.y;
+      if (screenX >= -10 && screenX <= 810 && screenY >= -520 && screenY <= 460) {
+        const pulse = 0.45 + 0.2 * ((Math.floor(Date.now() / 300) % 3) * 0.33);
+        const beamH = lRarity >= 4 ? 480 : 240;
+        const beamW = lRarity >= 4 ? 3 : 2;
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle   = lColor;
+        ctx.fillRect(screenX - beamW / 2, screenY - beamH, beamW, beamH);
+        ctx.globalAlpha = 1.0;
+      }
     }
 
     ctx.fillStyle  = '#fff';

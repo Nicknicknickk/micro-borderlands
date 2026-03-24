@@ -584,25 +584,19 @@ function drawMinimap() {
   const wx = x => MM_PAD + x * MM_SCALE * ((MM_W - MM_PAD*2) / MM_W) * (MM_W / (MM_W - MM_PAD*2));
   const wy = y => MM_PAD + y * (MM_H - MM_PAD*2) / 1500;
 
-  // ── Loot dots ─────────────────────────────
+  // ── Loot dots — only legendary+ shown, no shadow ──
   lhLoot.forEach(l => {
+    const lRar = l.isMod ? 2 : (l.gun ? l.gun.rarity : 0);
+    if (lRar < 3) return;
     const lc = l.isMod ? l.c : l.gun.c;
-    const r  = (l.gun && l.gun.rarity >= 4) ? 3 : 2;
-    mx.fillStyle   = lc;
-    mx.shadowColor = lc;
-    mx.shadowBlur  = (l.gun && l.gun.rarity >= 3) ? 4 : 0;
-    mx.beginPath();
-    mx.arc(wx(l.x), wy(l.y), r, 0, Math.PI * 2);
-    mx.fill();
-    mx.shadowBlur = 0;
+    mx.fillStyle = lc;
+    mx.fillRect(wx(l.x) - 2, wy(l.y) - 2, 4, 4);
   });
 
   // ── Exit portal ───────────────────────────
   if (lhExitPortal) {
     const pulse = Math.sin(Date.now() / 300) * 0.4 + 0.6;
     mx.fillStyle   = `rgba(0, 255, 200, ${pulse})`;
-    mx.shadowColor = '#00ffcc';
-    mx.shadowBlur  = 8;
     mx.beginPath();
     mx.arc(wx(lhExitPortal.x), wy(lhExitPortal.y), 5, 0, Math.PI * 2);
     mx.fill();
@@ -617,8 +611,6 @@ function drawMinimap() {
       // Boss — red pulsing diamond
       const pulse = Math.sin(Date.now() / 200) * 0.5 + 0.5;
       mx.fillStyle   = `rgba(255, 0, 0, ${0.7 + pulse * 0.3})`;
-      mx.shadowColor = '#ff0000';
-      mx.shadowBlur  = 10;
       mx.save();
       mx.translate(wx(e.x), wy(e.y));
       mx.rotate(Math.PI / 4);
@@ -650,8 +642,6 @@ function drawMinimap() {
   mx.translate(px, py);
   mx.rotate(ang);
   mx.fillStyle   = '#ffffff';
-  mx.shadowColor = '#ffffff';
-  mx.shadowBlur  = 6;
   mx.beginPath();
   mx.moveTo(5, 0);       // tip
   mx.lineTo(-4, -3);     // back left
