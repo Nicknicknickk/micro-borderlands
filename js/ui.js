@@ -12,24 +12,68 @@ window.launchGame = function () {
 
 
 window.showAchievements = function () {
-  // Stop any running game loop so it doesn't fight us for the canvas
+  // Stop any running game loop
   if (animId) { cancelAnimationFrame(animId); animId = null; }
   inSanctuary = false;
-  // Clear game canvas mouse handlers so clicking to return doesn't shoot/interact
   gCanvas.onmousedown = null;
   gCanvas.onmouseup   = null;
   gCanvas.onmousemove = null;
+  gCanvas.onclick     = null;
 
-  mainMenu.style.display      = 'none';
-  gameContainer.style.display = 'flex';
-  ctx.clearRect(0, 0, gCanvas.width, gCanvas.height);
-  drawAchievementScreen(ctx, gCanvas.width, gCanvas.height);
-  gCanvas.onclick = () => {
-    gCanvas.onclick = null;
-    gameContainer.style.display = 'none';
-    mainMenu.style.display      = 'flex';
-  };
+  mainMenu.style.display = 'none';
+  renderAchievementOverlay();
+  document.getElementById('ach-screen').style.display = 'flex';
 };
+
+window.closeAchievements = function () {
+  document.getElementById('ach-screen').style.display = 'none';
+  mainMenu.style.display = 'flex';
+};
+
+function renderAchievementOverlay() {
+  const unlocked = Object.keys(unlockedAchievements).length;
+  const total    = Object.keys(ACHIEVEMENTS).length;
+  const pct      = unlocked / total * 100;
+
+  document.getElementById('ach-progress-text').textContent = unlocked + ' / ' + total + ' Unlocked';
+  document.getElementById('ach-progress-bar').style.width  = pct + '%';
+
+  const rarityColors = { bronze:'#cd7f32', silver:'#c0c0c0', gold:'#ffd700', platinum:'#e5e4e2' };
+  const rarityBg     = { bronze:'#1a0d00', silver:'#0d0d1a', gold:'#1a1500', platinum:'#0f0f14' };
+
+  const grid = document.getElementById('ach-grid');
+  grid.innerHTML = '';
+
+  Object.values(ACHIEVEMENTS).forEach(ach => {
+    const done  = !!unlockedAchievements[ach.id];
+    const col   = rarityColors[ach.rarity] || '#aaa';
+    const bg    = rarityBg[ach.rarity]    || '#111';
+
+    const card = document.createElement('div');
+    card.style.cssText = [
+      'display:flex', 'align-items:center', 'gap:12px',
+      'padding:12px 14px',
+      'border-radius:4px',
+      'border:2px solid ' + (done ? col : '#2a2a2a'),
+      'background:' + (done ? bg : 'rgba(255,255,255,0.02)'),
+      'box-shadow:' + (done ? '0 0 10px ' + col + '33' : 'none'),
+      'opacity:' + (done ? '1' : '0.45'),
+      'transition:opacity 0.2s'
+    ].join(';');
+
+    card.innerHTML =
+      '<div style="font-size:1.8rem;flex-shrink:0;">' + (done ? ach.icon : '🔒') + '</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">' +
+          '<span style="color:' + (done ? '#fff' : '#666') + ';font-weight:bold;font-size:0.95rem;font-family:Courier New,monospace;">' + ach.name + '</span>' +
+          '<span style="color:' + col + ';font-size:0.7rem;font-weight:bold;font-family:Courier New,monospace;flex-shrink:0;">' + ach.rarity.toUpperCase() + '</span>' +
+        '</div>' +
+        '<div style="color:' + (done ? 'rgba(255,255,255,0.55)' : '#444') + ';font-size:0.78rem;margin-top:3px;font-family:Courier New,monospace;">' + ach.desc + '</div>' +
+      '</div>';
+
+    grid.appendChild(card);
+  });
+}
 
 window.goHome = function () {
   if (animId) cancelAnimationFrame(animId);

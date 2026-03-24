@@ -563,41 +563,7 @@ function loopLooter() {
   ctx.restore();
 
   // ── HUD ───────────────────────────────────
-  ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,800,60);
-  ctx.fillStyle='#111';ctx.fillRect(0,445,800,5);
-  ctx.fillStyle='#0ff';ctx.fillRect(0,445,(pExp/getExpRequired(pLevel))*800,5);
-  if(inVehicle){
-    ctx.fillStyle='#222';ctx.fillRect(10,10,150,15);ctx.fillStyle='#ff6600';ctx.fillRect(10,10,(Math.max(0,lhPlayer.vehicleHp)/lhPlayer.maxVehicleHp)*150,15);ctx.strokeStyle='#fff';ctx.strokeRect(10,10,150,15);
-    ctx.fillStyle='#fff';ctx.font='12px Arial';ctx.fillText(`ARMOR: ${Math.floor(lhPlayer.vehicleHp)}/${lhPlayer.maxVehicleHp}`,15,22);ctx.fillText(`Credits: $${playerCoins}`,10,45);
-  } else {
-    ctx.fillStyle='#00aaff';ctx.fillRect(10,10,(lhPlayer.shield/lhPlayer.maxShield)*150,10);ctx.strokeStyle='#fff';ctx.strokeRect(10,10,150,10);
-    ctx.fillStyle='#ff3333';ctx.fillRect(10,25,(Math.max(0,lhPlayer.hp)/lhPlayer.maxHp)*150,10);ctx.strokeStyle='#fff';ctx.strokeRect(10,25,150,10);
-    ctx.fillStyle='#fff';ctx.font='12px Arial';ctx.fillText(`SHD: ${Math.floor(lhPlayer.shield)}/${lhPlayer.maxShield} | HP: ${Math.floor(Math.max(0,lhPlayer.hp))}/${lhPlayer.maxHp} | Lv${pLevel}`,10,50);
-  }
-  ctx.fillStyle=lhPlayer.gun.c;ctx.font='14px Courier New';ctx.fillText(`GUN: ${lhPlayer.gun.name} (DMG: ${Math.floor(lhPlayer.gun.dmg)}) | NADE: ${lhPlayer.grenades}/3`,350,20);
-  const questTxt=activeQuest===0?'None':activeQuest===1?`Psychos (${questProgress}/25)`:`Loaders (${questProgress}/10)`;
-  const _bkt=Math.floor(20+(Math.max(1,pLevel)-1)*3.5);
-  const bossProgressTxt=lhBossSpawned?'BOSS ACTIVE':`BOSS: ${lhKills}/${_bkt}`;
-  ctx.fillStyle='#0ff';ctx.fillText(`[I] ECHO INV. | QUEST: ${questTxt} | ${bossProgressTxt}`,350,40);
-  if(hasVehicle){ctx.fillStyle=lhPlayer.vehicleCooldown>0?'#888':'#ffcc00';ctx.fillText('[V] Vehicle',650,40);}
-  if(lhPlayer.skillTimer>0){ctx.fillStyle='#0ff';ctx.fillText('SKILL ACTIVE!',650,25);}
-  else if(lhPlayer.skillCooldown<=0){ctx.fillStyle='#0f0';ctx.fillText('[E] SKILL READY',650,25);}
-  else{ctx.fillStyle='#888';ctx.fillText(`[E] CD: ${Math.ceil(lhPlayer.skillCooldown/60)}s`,650,25);}
-
-  if(lhBossSpawned){
-    const theBoss=lhEnemies.find(e=>e.type.includes('boss')||e.type==='crawmerax'||e.type==='pete'||e.type==='terramorphous');
-    if(theBoss&&theBoss.hp>0){
-      const bName=isRaidBoss?theBoss.type.toUpperCase()+' THE INVINCIBLE':isDuel?`DUELING: ${duelOpponent.toUpperCase()}`:runCount>=6?'GOLIATH THE INVINCIBLE':'PSYCHO KING';
-      ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(145,65,510,30);ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.strokeRect(145,65,510,30);
-      ctx.fillStyle=isRaidBoss?'purple':isDuel?'cyan':'red';ctx.fillRect(150,70,(Math.max(0,theBoss.hp)/theBoss.maxHp)*500,20);
-      ctx.fillStyle='#fff';ctx.font='bold 18px Courier';ctx.textAlign='center';ctx.fillText(`${bName} (${Math.floor(theBoss.hp)})`,400,85);ctx.textAlign='left';
-    }
-  }
-
-  if(isUnderdome){ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(250,60,300,50);ctx.strokeStyle='#ff007f';ctx.lineWidth=2;ctx.strokeRect(250,60,300,50);ctx.fillStyle='#ff007f';ctx.font='bold 24px Courier';ctx.textAlign='center';ctx.fillText(`WAVE ${underdomeWave}`,400,82);ctx.fillStyle='#fff';ctx.font='14px Courier';ctx.fillText(`Enemies Remaining: ${underdomeEnemies+lhEnemies.length}`,400,102);ctx.textAlign='left';}
-  if(mayhemMode===50){ctx.fillStyle='#ff00ff';ctx.font='bold 30px Courier';ctx.fillText('MAYHEM 50',630,55);}
-  else if(mayhemMode===20){ctx.fillStyle='purple';ctx.font='bold 30px Courier';ctx.fillText('MAYHEM 20',630,55);}
-  else if(mayhemMode===10){ctx.fillStyle='red';ctx.font='bold 30px Courier';ctx.fillText('MAYHEM 10',630,55);}
+  drawHUD();
 
   const hasBoss=lhBossSpawned&&lhEnemies.some(e=>e.type.includes('boss')||e.type==='crawmerax'||e.type==='pete'||e.type==='terramorphous');
   updateMusicIntensity(lhEnemies.length,hasBoss);
