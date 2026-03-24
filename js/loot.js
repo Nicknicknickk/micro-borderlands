@@ -136,28 +136,17 @@ function updateAndDrawLoot(isInSanctuary = false) {
     ctx.fillRect(l.x - 5, l.y - 5, 10, 10);
     ctx.shadowBlur = 0;
 
-    // ── Loot beam for rare+ drops ──────────
+    // ── Loot beam for rare+ drops (lightweight) ─
     const lRarity = l.isMod ? 2 : (l.gun.rarity || 0);
     if (lRarity >= 3) {
-      const pulse   = Math.sin(Date.now() / 400 + l.x) * 0.3 + 0.7;
-      const beamH   = lRarity >= 4 ? 600 : 300;
-      const beamW   = lRarity >= 5 ? 8 : lRarity >= 4 ? 5 : 3;
-      const grad    = ctx.createLinearGradient(l.x, l.y - beamH, l.x, l.y);
-      grad.addColorStop(0,   `rgba(0,0,0,0)`);
-      grad.addColorStop(0.4, `rgba(0,0,0,0)`);
-      grad.addColorStop(1,   lColor);
-      ctx.globalAlpha = pulse * (lRarity >= 4 ? 0.85 : 0.5);
-      ctx.fillStyle   = grad;
+      const t       = (Date.now() / 500) % (Math.PI * 2);
+      const pulse   = 0.55 + Math.sin(t + l.x * 0.01) * 0.2;
+      const beamH   = lRarity >= 4 ? 500 : 250;
+      const beamW   = lRarity >= 4 ? 4 : 2;
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle   = lColor;
+      // Simple rect beam — no gradient, no arc, no shadow
       ctx.fillRect(l.x - beamW / 2, l.y - beamH, beamW, beamH);
-      // Halo ring at base
-      ctx.beginPath();
-      ctx.arc(l.x, l.y, 14 + Math.sin(Date.now() / 250) * 3, 0, Math.PI * 2);
-      ctx.strokeStyle = lColor;
-      ctx.lineWidth   = lRarity >= 4 ? 2.5 : 1.5;
-      ctx.shadowColor = lColor;
-      ctx.shadowBlur  = lRarity >= 4 ? 18 : 8;
-      ctx.stroke();
-      ctx.shadowBlur  = 0;
       ctx.globalAlpha = 1.0;
     }
 
