@@ -12,6 +12,14 @@ window.launchGame = function () {
 
 
 window.showAchievements = function () {
+  // Stop any running game loop so it doesn't fight us for the canvas
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
+  inSanctuary = false;
+  // Clear game canvas mouse handlers so clicking to return doesn't shoot/interact
+  gCanvas.onmousedown = null;
+  gCanvas.onmouseup   = null;
+  gCanvas.onmousemove = null;
+
   mainMenu.style.display      = 'none';
   gameContainer.style.display = 'flex';
   ctx.clearRect(0, 0, gCanvas.width, gCanvas.height);

@@ -115,7 +115,7 @@ function genLoot(x, y, forcedLegendary = false, isMoxxi = false, isCasino = fals
     x, y,
     isMod: false,
     gun: { name: finalName, c: colors[rarity], dmg, fr, spd, rarity, wType, timer: 0 },
-    life: (forcedLegendary || isMoxxi || isCasino) ? 9999 : 1800
+    life: (forcedLegendary || isMoxxi || isCasino || isBossDrop) ? 9999 : 1800
   });
   if(rarity >= 4) { unlockAchievement('legendary'); }
 }
