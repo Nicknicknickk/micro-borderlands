@@ -15,9 +15,17 @@ goliathImg.src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbg5PEzh
 // ── Sprite background removal ─────────────────────────────────────────────
 // Strips white/gray checkerboard backgrounds from NPC sprites baked in as pixels
 function loadSpriteNoBg(src, threshold = 150, tolerance = 35) {
+  // Returns a canvas element (drawable by ctx.drawImage) with the background removed.
+  // We add .complete and .naturalHeight so existing checks like
+  // (img.complete && img.naturalHeight !== 0) still work.
+  const canvas = document.createElement('canvas');
+  canvas.complete     = false;
+  canvas.naturalHeight = 0;
+
   const img = new Image();
+  img.crossOrigin = 'anonymous';
   img.onload = function () {
-    const canvas = document.createElement('canvas');
+    // Runs exactly once — we never touch img.src again
     canvas.width  = img.width;
     canvas.height = img.height;
     const ctx2 = canvas.getContext('2d');
@@ -25,21 +33,20 @@ function loadSpriteNoBg(src, threshold = 150, tolerance = 35) {
 
     const imgData = ctx2.getImageData(0, 0, canvas.width, canvas.height);
     const d = imgData.data;
-
     for (let i = 0; i < d.length; i += 4) {
       const r = d[i], g = d[i+1], b = d[i+2];
       const bright = r > threshold && g > threshold && b > threshold;
       const gray   = Math.max(r,g,b) - Math.min(r,g,b) < tolerance;
-      if (bright && gray) d[i+3] = 0; // make transparent
+      if (bright && gray) d[i+3] = 0;
     }
     ctx2.putImageData(imgData, 0, 0);
 
-    // Replace the Image src with the cleaned canvas data
-    img.src = canvas.toDataURL('image/png');
+    // Mark as ready — existing code checks these two properties
+    canvas.complete      = true;
+    canvas.naturalHeight = img.naturalHeight;
   };
-  img.crossOrigin = 'anonymous';
   img.src = src;
-  return img;
+  return canvas;
 }
 
 const clapImg    = loadSpriteNoBg('sprites/claptrap.png');
