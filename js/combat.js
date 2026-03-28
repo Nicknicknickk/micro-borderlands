@@ -207,8 +207,8 @@ function loopLooter() {
 
   // ── Shooting ──────────────────────────────
   if(lhPlayer.gun.timer>0)lhPlayer.gun.timer--;
-  if(lhShooting&&lhPlayer.gun.timer<=0&&!inVehicle&&lhPlayer.char!=='krieg'){
-    if(!(lhPlayer.char==='krieg'&&lhPlayer.skillTimer>0)){
+  if(lhShooting&&lhPlayer.gun.timer<=0&&!inVehicle&&!(lhPlayer.char==='krieg'&&lhPlayer.skillTimer>0)){
+    if(true){
       const ang=Math.atan2(targetY-lhPlayer.y,targetX-lhPlayer.x);
       const gType=lhPlayer.gun.wType||'Pistol';
       playShootSound(gType,lhPlayer.x);
