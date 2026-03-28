@@ -6,17 +6,32 @@
 // ── Track Lists ───────────────────────────
 const TRACKS = {
   sanctuary: ['sanctuary_1.mp3','sanctuary_2.mp3'],
-  combat:    ['combat_1.mp3','combat_2.mp3','combat_3.mp3','combat_4.mp3'],
-  boss:      ['boss_1.mp3','boss_2.mp3','boss_3.mp3','boss_4.mp3','boss_5.mp3']
+  combat:    ['combat_1.mp3','combat_2.mp3','combat_3.mp3','combat_4.mp3','combat_5.mp3','combat_6.mp3'],
+  boss:      ['boss_1.mp3','boss_2.mp3','boss_3.mp3','boss_4.mp3','boss_5.mp3','boss_6.mp3','boss_7.mp3','boss_8.mp3']
 };
 
 // ── Music State ───────────────────────────
 let currentMusicState = 'none';
 let currentAudio      = null;
-let lastTrackIndex    = { sanctuary:-1, combat:-1, boss:-1 };
 let musicEnabled      = false;
 let fadeInterval      = null;
 let musicVolume       = 0.4;
+
+// ── Shuffle Bag ────────────────────────────
+// Each state gets its own shuffled queue.
+// Once the queue is empty it refills and reshuffles,
+// so every track plays before any track repeats.
+const shuffleBags = { sanctuary: [], combat: [], boss: [] };
+
+function refillBag(state) {
+  const list = [...TRACKS[state]];
+  // Fisher-Yates shuffle
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  shuffleBags[state] = list;
+}
 
 // ── SFX ───────────────────────────────────
 let audioCtx       = null;
@@ -26,14 +41,10 @@ let masterGain     = null;
 let musicIntensity = 0;
 let intensityTarget= 0;
 
-// ── Pick random track, no repeats ─────────
+// ── Pick next track from shuffle bag ──────
 function pickTrack(state) {
-  const list = TRACKS[state];
-  let idx;
-  do { idx = Math.floor(Math.random() * list.length); }
-  while (list.length > 1 && idx === lastTrackIndex[state]);
-  lastTrackIndex[state] = idx;
-  return list[idx];
+  if (!shuffleBags[state] || shuffleBags[state].length === 0) refillBag(state);
+  return shuffleBags[state].pop();
 }
 
 // ── Kill all audio immediately ─────────────
