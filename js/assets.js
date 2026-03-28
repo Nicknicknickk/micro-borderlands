@@ -15,6 +15,9 @@ const clapImg = new Image();
 clapImg.crossOrigin = 'Anonymous';
 clapImg.src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRgaWqUin2QIxnCnrv7aA0zpJr2RKlFlFR82w&s';
 
+const marcusImg = new Image();
+marcusImg.src = 'sprites/marcus.png';
+
 const catchARideImg = new Image();
 catchARideImg.crossOrigin = 'Anonymous';
 catchARideImg.src = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQev02_MqVA_cgUk1wkRKnKEHdNxb5cVlX8VQ&s';
