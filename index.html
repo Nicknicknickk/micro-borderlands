@@ -263,6 +263,107 @@
     .feature-tag:hover { border-color: #ffa500; color: #ffa500; }
     .feature-tag em { color: #ffa500; font-style: normal; margin-right: 4px; }
 
+    .info-card {
+      background: #0d0b07;
+      border: 2px solid #3a2e1a;
+      box-shadow: 3px 3px 0 #000;
+      color: #887755;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      padding: 8px 16px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 0.12s, color 0.12s, transform 0.08s, box-shadow 0.08s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .info-card:hover {
+      border-color: #ffa500; color: #ffa500;
+      transform: translate(-1px,-1px); box-shadow: 5px 5px 0 #000;
+      background: rgba(255,165,0,0.05);
+    }
+    .info-card:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #000; }
+    .info-card .ic-icon { font-size: 1.2rem; }
+    .info-card .ic-arrow { margin-left: auto; color: #3a2e1a; font-size: 0.9rem; }
+    .info-card:hover .ic-arrow { color: #ffa500; }
+
+    /* Info Modal */
+    .info-modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85); z-index: 9999;
+      justify-content: center; align-items: center;
+    }
+    .info-modal-overlay.open { display: flex; }
+    .info-modal {
+      background: #0d0b07;
+      border: 3px solid #ffa500;
+      box-shadow: 8px 8px 0 #000, 0 0 40px rgba(255,165,0,0.15);
+      max-width: 680px; width: 90vw;
+      max-height: 80vh; overflow-y: auto;
+      padding: 28px 28px 24px;
+      position: relative;
+      animation: modalIn 0.18s ease;
+    }
+    @keyframes modalIn {
+      from { opacity:0; transform: translateY(-20px) scale(0.97); }
+      to   { opacity:1; transform: translateY(0) scale(1); }
+    }
+    .info-modal h2 {
+      font-family: 'Bebas Neue', monospace; font-size: 2rem;
+      color: #ffa500; letter-spacing: 3px; margin: 0 0 4px;
+    }
+    .info-modal .modal-subtitle {
+      color: #443322; font-size: 0.72rem; letter-spacing: 0.2em;
+      text-transform: uppercase; margin-bottom: 20px;
+      font-family: 'Barlow Condensed', sans-serif;
+      border-bottom: 1px solid #2a1e0e; padding-bottom: 10px;
+    }
+    .info-modal-close {
+      position: absolute; top: 16px; right: 16px;
+      background: transparent; border: 2px solid #443322;
+      color: #443322; font-size: 1rem; cursor: pointer;
+      padding: 4px 10px; font-family: inherit;
+      transition: border-color 0.1s, color 0.1s;
+    }
+    .info-modal-close:hover { border-color: #ff4444; color: #ff4444; }
+    .modal-section { margin-bottom: 18px; }
+    .modal-section h3 {
+      font-family: 'Bebas Neue', monospace; font-size: 1.1rem;
+      letter-spacing: 2px; margin: 0 0 6px;
+    }
+    .modal-row {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 8px 0; border-bottom: 1px solid #1a1410;
+    }
+    .modal-row:last-child { border-bottom: none; }
+    .modal-icon { font-size: 1.4rem; width: 28px; text-align: center; flex-shrink: 0; margin-top: 2px; }
+    .modal-name { font-family: 'Bebas Neue', monospace; font-size: 1rem; letter-spacing: 1px; }
+    .modal-desc { color: #887755; font-size: 0.78rem; line-height: 1.5; margin-top: 2px; font-family: 'Barlow Condensed', sans-serif; }
+    .modal-tag {
+      display: inline-block; padding: 1px 7px;
+      border: 1px solid; font-size: 0.65rem; font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      margin-right: 4px; margin-bottom: 4px;
+    }
+
+    /* version badge + UE5 teaser */
+    .version-badge {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.7rem; letter-spacing: 0.15em; color: #3a2e1a;
+      text-transform: uppercase; margin-top: 6px;
+    }
+    .ue5-teaser {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.75rem; letter-spacing: 0.2em; color: #ffa50066;
+      text-transform: uppercase; margin-top: 4px;
+      animation: pulse-ue5 2s ease-in-out infinite;
+    }
+    @keyframes pulse-ue5 {
+      0%,100% { color: #ffa50055; }
+      50%      { color: #ffa500cc; }
+    }
+
     .ammo-bar {
       position: relative;
       z-index: 1;
@@ -490,30 +591,47 @@
       </div>
     </div>
 
-    <div class="menu-features">
-      <div class="feature-tag"><em>6</em> Playable Characters</div>
+    <!-- Info Cards Row -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:20px 20px 0;max-width:620px;animation:fadeSlideDown 0.7s ease 0.5s both;">
+      <div class="info-card" onclick="window.openInfoModal('enemies')">
+        <span class="ic-icon">💀</span> Enemy Types <span class="ic-arrow">▶</span>
+      </div>
+      <div class="info-card" onclick="window.openInfoModal('skills')">
+        <span class="ic-icon">⚡</span> Skill Trees <span class="ic-arrow">▶</span>
+      </div>
+      <div class="info-card" onclick="window.openInfoModal('marcus')">
+        <span class="ic-icon">🔫</span> Marcus's Shop <span class="ic-arrow">▶</span>
+      </div>
+      <div class="info-card" onclick="window.openInfoModal('loot')">
+        <span class="ic-icon">🎁</span> Loot System <span class="ic-arrow">▶</span>
+      </div>
+    </div>
+
+    <!-- Stats tags -->
+    <div class="menu-features" style="padding-top:14px;">
+      <div class="feature-tag"><em>6</em> Vault Hunters</div>
       <div class="feature-tag"><em>7</em> Maps</div>
-      <div class="feature-tag"><em>5</em> Enemy Types</div>
       <div class="feature-tag"><em>3</em> Raid Bosses</div>
       <div class="feature-tag"><em>16</em> Trophies</div>
       <div class="feature-tag"><em>∞</em> Procedural Loot</div>
       <div class="feature-tag"><em>8</em> Shield Types</div>
-      <div class="feature-tag">Marcus's Gun Shop</div>
-      <div class="feature-tag">Sell Guns for Credits</div>
       <div class="feature-tag">Mayhem Modes</div>
-      <div class="feature-tag">Skill Trees</div>
       <div class="feature-tag">Badass Ranks</div>
-      <div class="feature-tag">Sanctuary Hub</div>
-      <div class="feature-tag">Duel System</div>
       <div class="feature-tag">Underdome Arena</div>
     </div>
 
-    <!-- Ammo pip decoration — 12 pips, last 3 empty -->
+    <!-- Ammo pip decoration -->
     <div class="ammo-bar">
       <div class="ammo-pip"></div><div class="ammo-pip"></div><div class="ammo-pip"></div>
       <div class="ammo-pip"></div><div class="ammo-pip"></div><div class="ammo-pip"></div>
       <div class="ammo-pip"></div><div class="ammo-pip"></div><div class="ammo-pip"></div>
       <div class="ammo-pip empty"></div><div class="ammo-pip empty"></div><div class="ammo-pip empty"></div>
+    </div>
+
+    <!-- Version + UE5 teaser -->
+    <div style="text-align:center;padding-bottom:32px;animation:fadeSlideDown 0.7s ease 0.6s both;">
+      <div class="version-badge">⬡ &nbsp; FINAL VERSION &nbsp; ⬡</div>
+      <div class="ue5-teaser">▸ &nbsp; Unreal Engine 5 version coming soon &nbsp; ◂</div>
     </div>
 
     <!-- Hidden div still used by state.js updateMenuStats() -->
@@ -582,6 +700,225 @@
       mayhemEl.style.color = mayhem >= 50 ? '#ff00ff' : mayhem >= 20 ? '#cc00cc' : mayhem >= 10 ? '#ff3333' : '#ffa500';
     }
     populateLandingHUD();
+  </script>
+
+  <!-- ════════════════════════════════════════
+       INFO MODALS
+  ════════════════════════════════════════ -->
+  <div id="info-modal-overlay" class="info-modal-overlay" onclick="if(event.target===this)window.closeInfoModal()">
+    <div class="info-modal" id="info-modal-box">
+      <button class="info-modal-close" onclick="window.closeInfoModal()">✕ CLOSE</button>
+      <div id="info-modal-content"></div>
+    </div>
+  </div>
+
+  <script>
+  const INFO_DATA = {
+    enemies: {
+      title: 'ENEMY TYPES',
+      subtitle: 'Know your targets — survive the wasteland',
+      html: `
+        <div class="modal-row">
+          <div class="modal-icon">🦎</div><div>
+            <div class="modal-name" style="color:#88cc44;">SKAG</div>
+            <div class="modal-desc">Fast melee attackers that rush the player in packs. Low HP, high aggression. Common across all maps. Watch for the Badass variant — it hits hard and takes more punishment.</div>
+            <span class="modal-tag" style="color:#88cc44;border-color:#88cc44;">Melee</span>
+            <span class="modal-tag" style="color:#888;border-color:#555;">Common</span>
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-icon">👹</div><div>
+            <div class="modal-name" style="color:#ff8800;">BULLYMONG</div>
+            <div class="modal-desc">Throws rocks and charges at range. Tougher than Skags with more HP. Throws projectiles that deal significant damage. Found in mid-tier maps.</div>
+            <span class="modal-tag" style="color:#ff8800;border-color:#ff8800;">Ranged / Melee</span>
+            <span class="modal-tag" style="color:#888;border-color:#555;">Common</span>
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-icon">🔴</div><div>
+            <div class="modal-name" style="color:#ff4444;">PSYCHO</div>
+            <div class="modal-desc">Bandit raiders armed with guns. Uses cover, fires in bursts, and can throw grenades. The Badass Psycho variant has massive HP and deals elemental damage.</div>
+            <span class="modal-tag" style="color:#ff4444;border-color:#ff4444;">Ranged</span>
+            <span class="modal-tag" style="color:#ff8800;border-color:#ff8800;">Elite</span>
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-icon">🤖</div><div>
+            <div class="modal-name" style="color:#00ccff;">SURVEYOR</div>
+            <div class="modal-desc">Flying Hyperion robots that heal other enemies. Priority target — take them out first or they will undo all your damage. Deals shock damage on contact.</div>
+            <span class="modal-tag" style="color:#00ccff;border-color:#00ccff;">Support / Aerial</span>
+            <span class="modal-tag" style="color:#ff8800;border-color:#ff8800;">Elite</span>
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-icon">👻</div><div>
+            <div class="modal-name" style="color:#cc44ff;">STALKER</div>
+            <div class="modal-desc">Turns invisible and ambushes from close range. Extremely dangerous — listen for audio cues. Becomes visible when hit. Deals the highest melee damage of all common enemies.</div>
+            <span class="modal-tag" style="color:#cc44ff;border-color:#cc44ff;">Stealth / Melee</span>
+            <span class="modal-tag" style="color:#ff4444;border-color:#ff4444;">Dangerous</span>
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-icon">💀</div><div>
+            <div class="modal-name" style="color:#ff0044;">RAID BOSSES</div>
+            <div class="modal-desc">Three endgame raid bosses unlock progressively: <strong style="color:#ffa500;">Crawmerax</strong> (giant crab worm), <strong style="color:#ffa500;">Pete the Invincible</strong> (fire/shock hybrid), and <strong style="color:#ffa500;">Terramorphous</strong> (the ultimate challenge). Drop guaranteed legendary loot.</div>
+            <span class="modal-tag" style="color:#ff0044;border-color:#ff0044;">Boss</span>
+            <span class="modal-tag" style="color:#ffd700;border-color:#ffd700;">Legendary Drops</span>
+          </div>
+        </div>`
+    },
+    skills: {
+      title: 'SKILL TREES',
+      subtitle: 'Spend skill points at Quick Change — 3 skills per character',
+      html: `
+        <div class="modal-row">
+          <div class="modal-icon">⚔️</div><div>
+            <div class="modal-name" style="color:#00e5ff;">ZER0 — ASSASSIN</div>
+            <div class="modal-desc"><strong style="color:#00e5ff;">Headsh0t</strong> +10% Gun Dmg/Lv &nbsp;·&nbsp; <strong style="color:#00e5ff;">0ptics</strong> -10% Skill CD/Lv &nbsp;·&nbsp; <strong style="color:#00e5ff;">B0re</strong> +10% Crit/Lv<br>
+            Action Skill: <em>Decepti0n</em> — next shot deals 4× crit damage then deactivates cloak.</div>
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-icon">🔮</div><div>
+            <div class="modal-name" style="color:#cc44ff;">MAYA — SIREN</div>
+            <div class="modal-desc"><strong style="color:#cc44ff;">Flicker</strong> +20% Elem Dmg/Lv &nbsp;·&nbsp; <strong style="color:#cc44ff;">Ward</strong> +20% Shield/Lv &nbsp;·&nbsp; <strong style="color:#cc44ff;">Mind's Eye</strong> +10% Dmg/Lv<br>
+            Action Skill: <em>Phase Shield</em> — deflects bullets and blasts all nearby enemies.</div>
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-icon">💣</div><div>
+            <div class="modal-name" style="color:#00ee44;">AXTON — COMMANDO</div>
+            <div class="modal-desc"><strong style="color:#00ee44;">Sentry</strong> +20% Turret Dmg/Lv &nbsp;·&nbsp; <strong style="color:#00ee44;">Ready</strong> +10% Fire Rate/Lv &nbsp;·&nbsp; <strong style="color:#00ee44;">Healthy</strong> +20% HP/Lv<br>
+            Action Skill: <em>Sabre Turret</em> — deploys an auto-firing turret ally.</div>
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-icon">🔫</div><div>
+            <div class="modal-name" style="color:#ff3333;">SALVADOR — GUNZERKER</div>
+            <div class="modal-desc"><strong style="color:#ff3333;">Inconceivable</strong> +10% FR/Lv &nbsp;·&nbsp; <strong style="color:#ff3333;">Hard to Kill</strong> +20% HP/Lv &nbsp;·&nbsp; <strong style="color:#ff3333;">Juggernaut</strong> -10% CD/Lv<br>
+            Action Skill: <em>Gunzerking</em> — double fire rate and pellets, half damage taken.</div>
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-icon">🪓</div><div>
+            <div class="modal-name" style="color:#ff8800;">KRIEG — PSYCHO</div>
+            <div class="modal-desc"><strong style="color:#ff8800;">Bloodlust</strong> +20% Melee/Lv &nbsp;·&nbsp; <strong style="color:#ff8800;">Feed the Meat</strong> +20% HP/Lv &nbsp;·&nbsp; <strong style="color:#ff8800;">Embrace Pain</strong> -10% CD/Lv<br>
+            Action Skill: <em>Rampage</em> — massive melee AoE, 1.5× speed, half damage taken.</div>
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-icon">🤖</div><div>
+            <div class="modal-name" style="color:#00ddff;">GAIGE — MECHROMANCER</div>
+            <div class="modal-desc"><strong style="color:#00ddff;">Best Friends</strong> +20% Pet Dmg/Lv &nbsp;·&nbsp; <strong style="color:#00ddff;">My Shields</strong> +20% Shield/Lv &nbsp;·&nbsp; <strong style="color:#00ddff;">Typecast</strong> +10% Dmg/Lv<br>
+            Action Skill: <em>Deathtrap</em> — deploys a shock robot companion (longer with Anarchist mod).</div>
+          </div>
+        </div>
+        <div style="margin-top:14px;padding:10px;background:#111009;border:1px solid #2a1e0e;border-radius:2px;">
+          <div style="color:#ffa500;font-family:'Bebas Neue',monospace;letter-spacing:2px;margin-bottom:6px;">HOW TO UPGRADE</div>
+          <div style="color:#887755;font-size:0.78rem;line-height:1.6;font-family:'Barlow Condensed',sans-serif;">
+            Visit the <strong style="color:#ffa500;">Quick Change</strong> station in Sanctuary. Each skill can be levelled up to 33 times. You also switch characters there. Skill points are earned by spending Badass Tokens in the Badass Rank screen.
+          </div>
+        </div>`
+    },
+    marcus: {
+      title: "MARCUS'S MUNITIONS",
+      subtitle: "Buy, sell, and manage your arsenal",
+      html: `
+        <div class="modal-section">
+          <div style="color:#887755;font-size:0.82rem;line-height:1.6;font-family:'Barlow Condensed',sans-serif;margin-bottom:16px;">
+            Marcus runs the gun shop in Sanctuary. He buys and sells procedurally generated weapons across 6 rarity tiers. His stock refreshes every run, so check back often for upgrades.
+          </div>
+        </div>
+        <div class="modal-section">
+          <h3 style="color:#ffa500;">RARITY TIERS</h3>
+          <div class="modal-row"><div class="modal-icon">⬜</div><div>
+            <div class="modal-name" style="color:#aaaaaa;">COMMON (White)</div>
+            <div class="modal-desc">Basic weapons. Low damage, fast fire rate. Good for early game.</div>
+          </div></div>
+          <div class="modal-row"><div class="modal-icon">🟩</div><div>
+            <div class="modal-name" style="color:#44ff44;">UNCOMMON (Green)</div>
+            <div class="modal-desc">Slightly better stats. Start replacing whites as soon as possible.</div>
+          </div></div>
+          <div class="modal-row"><div class="modal-icon">🟦</div><div>
+            <div class="modal-name" style="color:#4488ff;">RARE (Blue)</div>
+            <div class="modal-desc">Solid mid-game weapons. Good damage and accuracy balance.</div>
+          </div></div>
+          <div class="modal-row"><div class="modal-icon">🟪</div><div>
+            <div class="modal-name" style="color:#aa44ff;">EPIC (Purple)</div>
+            <div class="modal-desc">High damage output. Often come with elemental properties.</div>
+          </div></div>
+          <div class="modal-row"><div class="modal-icon">🟧</div><div>
+            <div class="modal-name" style="color:#ffa500;">LEGENDARY (Orange)</div>
+            <div class="modal-desc">Rare powerful drops with unique properties. Never sell these. Boss enemies have the best chance to drop legendaries.</div>
+          </div></div>
+          <div class="modal-row"><div class="modal-icon">🔵</div><div>
+            <div class="modal-name" style="color:#ff007f;">E-TECH (Pink) & PEARL (Cyan)</div>
+            <div class="modal-desc">The rarest drops in the game. E-Tech weapons have piercing bullets. Pearls deal double damage with extra fire rate. Extremely rare from raid bosses only.</div>
+          </div></div>
+        </div>
+        <div class="modal-section">
+          <h3 style="color:#ffa500;">WEAPON TYPES</h3>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+            <span class="modal-tag" style="color:#ffa500;border-color:#ffa500;">Pistol — Balanced</span>
+            <span class="modal-tag" style="color:#00ccff;border-color:#00ccff;">SMG — Fast fire rate</span>
+            <span class="modal-tag" style="color:#ff8800;border-color:#ff8800;">Shotgun — AoE spread</span>
+            <span class="modal-tag" style="color:#44ff44;border-color:#44ff44;">Sniper — High single-shot dmg</span>
+            <span class="modal-tag" style="color:#ff4444;border-color:#ff4444;">Launcher — Explosive AoE</span>
+          </div>
+        </div>`
+    },
+    loot: {
+      title: 'LOOT SYSTEM',
+      subtitle: 'Infinite procedural weapons — no two guns alike',
+      html: `
+        <div class="modal-section">
+          <div style="color:#887755;font-size:0.82rem;line-height:1.6;font-family:'Barlow Condensed',sans-serif;margin-bottom:14px;">
+            Every weapon in the game is procedurally generated. Name, damage, fire rate, speed, rarity and elemental type are all rolled independently. This means millions of possible combinations.
+          </div>
+        </div>
+        <div class="modal-section">
+          <h3 style="color:#ffa500;">HOW TO GET BETTER LOOT</h3>
+          <div class="modal-row"><div class="modal-icon">👹</div><div>
+            <div class="modal-name" style="color:#ff8800;">Kill Enemies</div>
+            <div class="modal-desc">Every enemy has a chance to drop weapons. Badass variants have 3× the drop chance and better rarity rolls.</div>
+          </div></div>
+          <div class="modal-row"><div class="modal-icon">💀</div><div>
+            <div class="modal-name" style="color:#ff4444;">Raid Bosses</div>
+            <div class="modal-desc">Guaranteed legendary drops plus multiple scatter drops. The best source of E-Tech and Pearl weapons in the game.</div>
+          </div></div>
+          <div class="modal-row"><div class="modal-icon">🎰</div><div>
+            <div class="modal-name" style="color:#ffd700;">Moxxi's Slots</div>
+            <div class="modal-desc">Spend credits at the slot machine in Sanctuary for a chance at high-rarity weapons. Can occasionally jackpot a legendary.</div>
+          </div></div>
+          <div class="modal-row"><div class="modal-icon">⚡</div><div>
+            <div class="modal-name" style="color:#ff007f;">Mayhem Mode</div>
+            <div class="modal-desc">Activate Mayhem at the console in Sanctuary. Higher Mayhem = stronger enemies but massively improved loot quality and quantity.</div>
+          </div></div>
+          <div class="modal-row"><div class="modal-icon">🎒</div><div>
+            <div class="modal-name" style="color:#00ccff;">Managing Your Loot</div>
+            <div class="modal-desc">Press <strong style="color:#ffa500;">F</strong> to pick up loot. Press <strong style="color:#ffa500;">I</strong> for Inventory to compare and equip. Use the <strong style="color:#ffa500;">Vault</strong> (B) to store guns between runs. Sell unwanted guns at Marcus's shop for credits.</div>
+          </div></div>
+        </div>`
+    }
+  };
+
+  window.openInfoModal = function(key) {
+    const data = INFO_DATA[key];
+    if (!data) return;
+    document.getElementById('info-modal-content').innerHTML =
+      '<h2>' + data.title + '</h2>' +
+      '<div class="modal-subtitle">' + data.subtitle + '</div>' +
+      data.html;
+    document.getElementById('info-modal-overlay').classList.add('open');
+  };
+
+  window.closeInfoModal = function() {
+    document.getElementById('info-modal-overlay').classList.remove('open');
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') window.closeInfoModal();
+  });
   </script>
 </body>
 </html>
