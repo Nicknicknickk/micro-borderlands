@@ -166,8 +166,9 @@ function renderInventoryV2() {
         ${statRow('Damage/Shot', dpsInfo.dmg.toLocaleString(), '#ffcc00')}
         ${statRow('Fire Rate', `${dpsInfo.fr} frames`, '#00ff88')}
         ${statRow('Crit Chance', `${Math.floor((0.15 + (p ? p.mods.crit : 0)) * 100)}%`, '#ff4444')}
-        ${statRow('Move Speed', `${(5 + rankSpeed * 0.3).toFixed(1)}`, '#00ccff')}
+        ${statRow('Move Speed', `${(5 + rankSpeed * 0.3 + (p ? (p.mods.speed||0) : 0)).toFixed(1)}${(p&&p.mods.speed)?' <span style="color:#ffa500;font-size:0.7rem">(+relic)</span>':''}`, '#00ccff')}
         ${statRow('Grenades', `${p ? p.grenades : 0}/3`, '#88ff00')}
+        ${equippedRelic ? statRow('⚗ Relic Bonus', formatRelicValue(equippedRelic.stat, equippedRelic.value), equippedRelic.c) : ''}
       </div>
 
       <!-- Badass Ranks -->
@@ -223,7 +224,7 @@ function renderInventoryV2() {
       <!-- Equipped gear row -->
       <div style="margin-bottom:18px;">
         <div style="color:#666;font-size:0.72rem;letter-spacing:1px;margin-bottom:8px;">EQUIPPED GEAR</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
 
           <!-- Weapon -->
           <div style="background:rgba(255,255,255,0.04);border:1px solid ${p ? p.gun.c : '#333'};border-radius:4px;padding:10px;box-shadow:0 0 8px ${p ? p.gun.c + '33' : 'transparent'};">
@@ -238,6 +239,21 @@ function renderInventoryV2() {
             <div style="color:${shieldColor};font-weight:bold;font-size:0.9rem;">${shieldName}</div>
             <div style="color:#777;font-size:0.75rem;">Cap: ${shieldCap}</div>
           </div>
+
+          <!-- Relic -->
+          ${(() => {
+            const rc = equippedRelic ? equippedRelic.c : '#555';
+            const rn = equippedRelic ? equippedRelic.name : 'None';
+            const rd = equippedRelic ? equippedRelic.desc : 'No relic equipped';
+            return `
+              <div style="background:rgba(255,255,255,0.04);border:1px solid ${rc}55;border-radius:4px;padding:10px;position:relative;">
+                <div style="color:#666;font-size:0.7rem;margin-bottom:4px;">⚗️ RELIC</div>
+                <div style="color:${rc};font-weight:bold;font-size:0.9rem;">${rn}</div>
+                <div style="color:#777;font-size:0.75rem;">${rd}</div>
+                ${equippedRelic ? `<button onclick="window.unequipRelic()" style="margin-top:6px;background:transparent;color:#888;border:1px solid #555;padding:2px 8px;cursor:pointer;font-family:inherit;font-size:0.72rem;width:auto;box-shadow:none;">UNEQUIP</button>` : ''}
+              </div>
+            `;
+          })()}
 
           <!-- Class Mod -->
           <div style="background:rgba(255,255,255,0.04);border:1px solid #0ff3;border-radius:4px;padding:10px;">
@@ -276,6 +292,32 @@ function renderInventoryV2() {
                 </div>
               `;
             }).join('')
+        }
+      </div>
+
+      <!-- Stored Relics -->
+      <div style="margin-bottom:18px;">
+        <div style="color:#666;font-size:0.72rem;letter-spacing:1px;margin-bottom:8px;">STORED RELICS (${inventoryRelics.length})</div>
+        ${inventoryRelics.length === 0
+          ? '<div style="color:#444;font-size:0.85rem;padding:10px 0;">No relics in ECHO storage.</div>'
+          : inventoryRelics.map((rel, idx) => `
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;
+                border:1px solid ${rel.c}55;border-radius:3px;margin-bottom:5px;background:rgba(255,255,255,0.02);">
+                <div style="width:8px;height:8px;border-radius:50%;background:${rel.c};flex-shrink:0;box-shadow:0 0 6px ${rel.c};"></div>
+                <div style="flex:1;">
+                  <span style="color:${rel.c};font-weight:bold;font-size:0.9rem;">⚗ ${rel.name}</span><br>
+                  <span style="color:#666;font-size:0.78rem;">${rel.desc}</span>
+                </div>
+                <div style="display:flex;gap:5px;flex-shrink:0;">
+                  <button onclick="window.equipRelic(${idx})" style="
+                    background:${rel.c};color:#000;border:none;
+                    padding:4px 12px;cursor:pointer;font-weight:bold;font-family:inherit;font-size:0.82rem;width:auto;box-shadow:none;">EQUIP</button>
+                  <button onclick="window.dropRelic(${idx})" style="
+                    background:#ff3333;color:#fff;border:none;
+                    padding:4px 10px;cursor:pointer;font-weight:bold;font-family:inherit;font-size:0.82rem;width:auto;box-shadow:none;">DROP</button>
+                </div>
+              </div>
+            `).join('')
         }
       </div>
 
@@ -360,5 +402,50 @@ window.dropBackpackGun = function (idx) {
   playSound('hit');
   backpackGuns.splice(idx, 1);
   localStorage.setItem('borderBackpackGuns', JSON.stringify(backpackGuns));
+  renderInventoryV2();
+};
+
+// ── Relic equip / unequip / drop ───────────
+window.equipRelic = function (idx) {
+  playSound('coin');
+  const incoming = inventoryRelics.splice(idx, 1)[0];
+  if (equippedRelic) {
+    inventoryRelics.push(JSON.parse(JSON.stringify(equippedRelic)));
+  }
+  equippedRelic = incoming;
+  localStorage.setItem('borderRelic',  JSON.stringify(equippedRelic));
+  localStorage.setItem('borderRelics', JSON.stringify(inventoryRelics));
+  // Rebuild player stats so relic bonuses apply immediately
+  if (lhPlayer) {
+    const rebuilt = buildPlayer(lhPlayer.char);
+    lhPlayer.maxHp    = rebuilt.maxHp;
+    lhPlayer.hp       = Math.min(lhPlayer.hp, rebuilt.maxHp);
+    lhPlayer.maxShield = rebuilt.maxShield;
+    lhPlayer.mods      = rebuilt.mods;
+  }
+  renderInventoryV2();
+};
+
+window.unequipRelic = function () {
+  if (!equippedRelic) return;
+  playSound('hit');
+  inventoryRelics.push(JSON.parse(JSON.stringify(equippedRelic)));
+  equippedRelic = null;
+  localStorage.removeItem('borderRelic');
+  localStorage.setItem('borderRelics', JSON.stringify(inventoryRelics));
+  if (lhPlayer) {
+    const rebuilt = buildPlayer(lhPlayer.char);
+    lhPlayer.maxHp    = rebuilt.maxHp;
+    lhPlayer.hp       = Math.min(lhPlayer.hp, rebuilt.maxHp);
+    lhPlayer.maxShield = rebuilt.maxShield;
+    lhPlayer.mods      = rebuilt.mods;
+  }
+  renderInventoryV2();
+};
+
+window.dropRelic = function (idx) {
+  playSound('hit');
+  inventoryRelics.splice(idx, 1);
+  localStorage.setItem('borderRelics', JSON.stringify(inventoryRelics));
   renderInventoryV2();
 };

@@ -21,7 +21,21 @@ function buildPlayer(charClass) {
   if(charClass==='salvador'){ frBonus=cS[0]*0.1; hpBonus=cS[1]*0.2; cdBonus=cS[2]*0.1; }
   if(charClass==='krieg')   { meleeBonus=cS[0]*0.2; hpBonus=cS[1]*0.2; cdBonus=cS[2]*0.1; }
   if(charClass==='gaige')   { petBonus=cS[0]*0.2; shdBonus=cS[1]*0.2; dmgBonus=cS[2]*0.1; }
-  let baseMaxHp=((charClass==='maya'?200:150)+(pLevel*20)+(rankHP*25)+equippedArmor.hpBonus)*(1+hpBonus);
+
+  // ── Relic bonuses ──────────────────────────
+  let relicHpFlat=0, relicSpdBonus=0, relicHpRegen=0, relicExpBoost=0;
+  if (equippedRelic) {
+    const rv = equippedRelic.value;
+    if (equippedRelic.stat === 'dmg')      dmgBonus   += rv;
+    if (equippedRelic.stat === 'crit')     critBonus  += rv;
+    if (equippedRelic.stat === 'cd')       cdBonus    += rv;
+    if (equippedRelic.stat === 'maxHp')    relicHpFlat = rv;
+    if (equippedRelic.stat === 'speed')    relicSpdBonus = rv;
+    if (equippedRelic.stat === 'hpRegen')  relicHpRegen  = rv;
+    if (equippedRelic.stat === 'expBoost') relicExpBoost = rv;
+  }
+
+  let baseMaxHp=((charClass==='maya'?200:150)+(pLevel*20)+(rankHP*25)+equippedArmor.hpBonus+relicHpFlat)*(1+hpBonus);
   if(equippedCMod==='Survivor') baseMaxHp+=100;
   const totalMaxShield=(50+(shieldLvl*50))*(1+shdBonus);
   const savedGunStr=localStorage.getItem('borderGun');
@@ -33,6 +47,7 @@ function buildPlayer(charClass) {
     grenades:playerGrenades, maxGrenades:3, grenadeCooldown:0,
     skillTimer:0, skillCooldown:0, win:false, dead:false, char:charClass, gun:currentGun,
     vehicleHp:2500, maxVehicleHp:2500, vehicleCooldown:0,
-    mods:{dmg:dmgBonus,cd:cdBonus,crit:critBonus,elem:elemBonus,pet:petBonus,fr:frBonus,melee:meleeBonus}
+    mods:{dmg:dmgBonus,cd:cdBonus,crit:critBonus,elem:elemBonus,pet:petBonus,fr:frBonus,melee:meleeBonus,
+          speed:relicSpdBonus, hpRegen:relicHpRegen, expBoost:relicExpBoost}
   };
 }

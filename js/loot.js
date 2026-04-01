@@ -19,12 +19,20 @@ function genLoot(x, y, forcedLegendary = false, isMoxxi = false, isCasino = fals
     return;
   }
 
+  // ── Relic Drop ────────────────────────────
+  if (!forcedLegendary && !isMoxxi && !isCasino && Math.random() < 0.12) {
+    genRelic(x, y);
+    return;
+  }
+
   // ── Gun Drop ──────────────────────────────
   // ── Rarity drop rates (based on wiki values) ──────────────
   // Regular drops:  Common 40%, Uncommon 30%, Rare 20%, Epic 8%, Legendary 1.5%, E-Tech 0.4%, Pearl 0.1%
   // Boss drops:     skip Common/Uncommon floor, better Epic/Legendary chances
   // forcedLegendary = guaranteed orange legendary (boss kill reward)
-  const rRoll = Math.random();
+  // ── Loot Find bonus (from Relic) ──────────
+  const lootFindBonus = (equippedRelic && equippedRelic.stat === 'lootFind') ? equippedRelic.value : 0;
+  const rRoll = Math.max(0, Math.random() - lootFindBonus);
   let rarity;
   if (forcedLegendary) {
     // Boss drop: guaranteed legendary+, small chance of E-Tech or Pearl
@@ -120,6 +128,69 @@ function genLoot(x, y, forcedLegendary = false, isMoxxi = false, isCasino = fals
   if(rarity >= 4) { unlockAchievement('legendary'); }
 }
 
+// ── Relic Generation ──────────────────────────────────────
+const RELIC_POOL = [
+  { name: 'Aggression Relic',      stat: 'dmg',      baseDesc: '+Gun Damage'         },
+  { name: "Bone of the Ancients",  stat: 'dmg',      baseDesc: '+Gun Damage'         },
+  { name: "Sheriff's Badge",       stat: 'dmg',      baseDesc: '+Gun Damage'         },
+  { name: 'Adrenaline Relic',      stat: 'speed',    baseDesc: '+Movement Speed'     },
+  { name: 'The Afterburner',       stat: 'speed',    baseDesc: '+Movement Speed'     },
+  { name: 'Heart of the Ancients', stat: 'hpRegen',  baseDesc: '+HP Regen'           },
+  { name: 'Vitality Relic',        stat: 'maxHp',    baseDesc: '+Max HP'             },
+  { name: 'Blood of the Seraphs',  stat: 'maxHp',    baseDesc: '+Max HP'             },
+  { name: 'Proficiency Relic',     stat: 'cd',       baseDesc: '+Skill Cooldown Spd' },
+  { name: 'Shadow of the Seraphs', stat: 'cd',       baseDesc: '+Skill Cooldown Spd' },
+  { name: 'Sniper Relic',          stat: 'crit',     baseDesc: '+Crit Chance'        },
+  { name: 'Lucid Relic',           stat: 'crit',     baseDesc: '+Crit Chance'        },
+  { name: "Vault Hunter's Relic",  stat: 'lootFind', baseDesc: '+Loot Quality'       },
+  { name: "Scholar's Relic",       stat: 'expBoost', baseDesc: '+EXP Gained'         },
+];
+
+const RELIC_VALUES = {
+  dmg:      [0.05, 0.10, 0.15, 0.20, 0.35],
+  speed:    [0.3,  0.5,  0.8,  1.2,  2.0 ],
+  hpRegen:  [1,    2,    3,    5,    8   ],
+  maxHp:    [50,   100,  200,  350,  500 ],
+  cd:       [0.05, 0.10, 0.15, 0.20, 0.30],
+  crit:     [0.03, 0.05, 0.08, 0.12, 0.20],
+  lootFind: [0.10, 0.20, 0.35, 0.50, 0.80],
+  expBoost: [0.10, 0.20, 0.30, 0.50, 0.80],
+};
+
+function formatRelicValue(stat, value) {
+  if (['dmg','cd','lootFind','expBoost'].includes(stat)) return `+${Math.round(value*100)}%`;
+  if (stat === 'crit')    return `+${Math.round(value*100)}% Crit`;
+  if (stat === 'speed')   return `+${value.toFixed(1)} Spd`;
+  if (stat === 'maxHp')   return `+${value} HP`;
+  if (stat === 'hpRegen') return `+${value} HP/s`;
+  return `+${value}`;
+}
+
+function genRelic(x, y) {
+  const rarityColors = ['#ffffff','#00ff00','#0099ff','#800080','#ffa500'];
+  const rarityNames  = ['Common','Uncommon','Rare','Epic','Legendary'];
+
+  const rr = Math.random();
+  const rarity = rr > 0.985 ? 4
+               : rr > 0.930 ? 3
+               : rr > 0.730 ? 2
+               : rr > 0.430 ? 1
+               :               0;
+
+  const base  = RELIC_POOL[Math.floor(Math.random() * RELIC_POOL.length)];
+  const value = RELIC_VALUES[base.stat][rarity];
+  const c     = rarityColors[rarity];
+  let finalName = rarity === 4 ? 'LEGENDARY ' + base.name : base.name;
+  const desc  = `[${rarityNames[rarity]}] ${base.baseDesc} (${formatRelicValue(base.stat, value)})`;
+
+  spawnParticles(x, y, c, 15, 3, 20);
+  lhLoot.push({
+    x, y, isRelic: true,
+    relic: { name: finalName, c, stat: base.stat, value, rarity, desc },
+    life: 1800
+  });
+}
+
 // ── Draw & pickup loot ────────────────────────────────────
 function updateAndDrawLoot(isInSanctuary = false) {
   let nearestLoot = null;
@@ -128,7 +199,7 @@ function updateAndDrawLoot(isInSanctuary = false) {
   for (let i = lhLoot.length - 1; i >= 0; i--) {
     const l     = lhLoot[i];
     l.life--;
-    const lColor = l.isMod ? l.c : l.gun.c;
+    const lColor = l.isRelic ? l.relic.c : l.isMod ? l.c : l.gun.c;
 
     ctx.fillStyle  = lColor;
     ctx.shadowColor = lColor;
@@ -137,7 +208,7 @@ function updateAndDrawLoot(isInSanctuary = false) {
     ctx.shadowBlur = 0;
     ctx.fillStyle  = '#fff';
     ctx.font       = 'bold 12px Arial';
-    const lName    = l.isMod ? `[${l.type}] ${l.name}` : l.gun.name;
+    const lName    = l.isRelic ? `⚗ ${l.relic.name}` : l.isMod ? `[${l.type}] ${l.name}` : l.gun.name;
     ctx.fillText(lName, l.x - 10, l.y - 15);
 
     const d = Math.hypot(lhPlayer.x - l.x, lhPlayer.y - l.y);
@@ -153,14 +224,16 @@ function updateAndDrawLoot(isInSanctuary = false) {
   ctx.fillStyle  = '#ffcc00';
   ctx.font       = 'bold 16px Arial';
   ctx.textAlign  = 'center';
-  const pickTxt  = nearestLoot.lootObj.isMod
+  const pickTxt  = nearestLoot.lootObj.isRelic
+    ? `[F] Pick Up: ${nearestLoot.lootObj.relic.name}`
+    : nearestLoot.lootObj.isMod
     ? `[F] Pick Up ${nearestLoot.lootObj.name}`
     : `[F] Pick Up: ${nearestLoot.lootObj.gun.name} | [B] Beam to Vault`;
   ctx.fillText(pickTxt, lhPlayer.x, lhPlayer.y - 30);
   ctx.textAlign = 'left';
 
   // ── Beam to Vault ─────────────────────────
-  if ((keys['KeyB'] || keys['b']) && !nearestLoot.lootObj.isMod) {
+  if ((keys['KeyB'] || keys['b']) && !nearestLoot.lootObj.isMod && !nearestLoot.lootObj.isRelic) {
     keys['KeyB'] = false; keys['b'] = false;
     if (bankGuns.length < 100) {
       playSound('coin');
@@ -180,10 +253,15 @@ function updateAndDrawLoot(isInSanctuary = false) {
   if (keys['KeyF'] || keys['f']) {
     keys['KeyF'] = false; keys['f'] = false;
     playSound('coin');
-    const lootColor = nearestLoot.lootObj.isMod ? nearestLoot.lootObj.c : nearestLoot.lootObj.gun.c;
+    const lootColor = nearestLoot.lootObj.isRelic ? nearestLoot.lootObj.relic.c : nearestLoot.lootObj.isMod ? nearestLoot.lootObj.c : nearestLoot.lootObj.gun.c;
     spawnParticles(lhPlayer.x, lhPlayer.y, lootColor, 25, 4, 25);
 
-    if (nearestLoot.lootObj.isMod) {
+    if (nearestLoot.lootObj.isRelic) {
+      inventoryRelics.push(JSON.parse(JSON.stringify(nearestLoot.lootObj.relic)));
+      localStorage.setItem('borderRelics', JSON.stringify(inventoryRelics));
+      lhLoot.splice(nearestLoot.index, 1);
+      lhDmgText.push({ x: lhPlayer.x, y: lhPlayer.y - 40, txt: 'RELIC STORED!', life: 40, c: '#ffa500' });
+    } else if (nearestLoot.lootObj.isMod) {
       inventoryMods.push({
         type:   nearestLoot.lootObj.type,
         name:   nearestLoot.lootObj.name,

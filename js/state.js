@@ -95,15 +95,19 @@ let charSkills = JSON.parse(localStorage.getItem('borderSkills')) || {
 let bankGuns      = [];
 let inventoryMods = [];
 let backpackGuns  = [];
-let equippedGun   = { name: 'Starter Pistol', c: '#fff', dmg: 20, fr: 12, spd: 10, timer: 0 };
-let equippedArmor = { name: 'None', dmgRed: 0, hpBonus: 0 };
+let equippedGun    = { name: 'Starter Pistol', c: '#fff', dmg: 20, fr: 12, spd: 10, timer: 0 };
+let equippedArmor  = { name: 'None', dmgRed: 0, hpBonus: 0 };
+let equippedRelic  = null;
+let inventoryRelics = [];
 
 try {
-  let s = localStorage.getItem('borderBank');        if(s) bankGuns      = JSON.parse(s);
-  let m = localStorage.getItem('borderInvMods');     if(m) inventoryMods = JSON.parse(m);
-  let b = localStorage.getItem('borderBackpackGuns');if(b) backpackGuns  = JSON.parse(b);
-  let g = localStorage.getItem('borderGun');         if(g) equippedGun   = JSON.parse(g);
-  let a = localStorage.getItem('borderArmor');       if(a) equippedArmor = JSON.parse(a);
+  let s = localStorage.getItem('borderBank');        if(s) bankGuns        = JSON.parse(s);
+  let m = localStorage.getItem('borderInvMods');     if(m) inventoryMods   = JSON.parse(m);
+  let b = localStorage.getItem('borderBackpackGuns');if(b) backpackGuns    = JSON.parse(b);
+  let g = localStorage.getItem('borderGun');         if(g) equippedGun     = JSON.parse(g);
+  let a = localStorage.getItem('borderArmor');       if(a) equippedArmor   = JSON.parse(a);
+  let r = localStorage.getItem('borderRelic');       if(r) equippedRelic   = JSON.parse(r);
+  let ri= localStorage.getItem('borderRelics');      if(ri) inventoryRelics = JSON.parse(ri);
 } catch(e) { console.warn('Save data issue:', e); }
 
 // ── Skill Definitions ──────────────────────
@@ -137,7 +141,8 @@ function getExpRequired(lvl) { return Math.floor(100 * Math.pow(1.5, lvl - 1)); 
 
 function gainExp(amount) {
   if (pLevel >= 72) return;
-  pExp += amount;
+  const expMult = 1 + (lhPlayer?.mods?.expBoost || 0);
+  pExp += Math.floor(amount * expMult);
   while (pExp >= getExpRequired(pLevel) && pLevel < 72) {
     pExp -= getExpRequired(pLevel);
     pLevel++;

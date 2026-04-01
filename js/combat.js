@@ -151,7 +151,7 @@ function loopLooter() {
 
   const baseSpd=inVehicle?12:5;
   const cappedRankSpeed = Math.min(rankSpeed, 10);
-  let spd=baseSpd+(cappedRankSpeed*0.3)+(activeMapIndex===1?3:0);
+  let spd=baseSpd+(cappedRankSpeed*0.3)+(activeMapIndex===1?3:0)+(lhPlayer.mods.speed||0);
   if(lhPlayer.char==='krieg'&&lhPlayer.skillTimer>0)spd*=1.5;
   if(keys['KeyW']||keys['ArrowUp'])   lhPlayer.y=Math.max(15,lhPlayer.y-spd);
   if(keys['KeyS']||keys['ArrowDown']) lhPlayer.y=Math.min(WORLD_H-15,lhPlayer.y+spd);
@@ -162,6 +162,7 @@ function loopLooter() {
   if(equippedCMod==='Survivor'&&Math.random()<0.05&&lhPlayer.hp<lhPlayer.maxHp)lhPlayer.hp++;
   if(equippedCMod==='Nurse'&&lhPlayer.char==='maya'&&Math.random()<0.1&&lhPlayer.hp<lhPlayer.maxHp)lhPlayer.hp+=2;
   if(lhPlayer.char==='salvador'&&lhPlayer.skillTimer>0&&Math.random()<0.2&&lhPlayer.hp<lhPlayer.maxHp)lhPlayer.hp+=5;
+  if((lhPlayer.mods.hpRegen||0)>0&&dayNightTimer%60===0&&lhPlayer.hp<lhPlayer.maxHp){lhPlayer.hp=Math.min(lhPlayer.maxHp,lhPlayer.hp+lhPlayer.mods.hpRegen);}
 
   if(lhPlayer.shieldRechargeDelay>0)lhPlayer.shieldRechargeDelay--;
   else if(lhPlayer.shield<lhPlayer.maxShield){lhPlayer.shield+=0.5;if(lhPlayer.shield>lhPlayer.maxShield)lhPlayer.shield=lhPlayer.maxShield;}
